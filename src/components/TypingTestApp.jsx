@@ -235,7 +235,7 @@ const TypingTestApp = () => {
     const [leaderboard, setLeaderboard] = useState([]);
 
     const createGame = () => {
-      const link = `https://typingtest.com/game/${Math.random().toString(36).substr(2, 9)}`;
+      const link = `https://varnavelocity.vercel.app/game/${Math.random().toString(36).substr(2, 9)}`;
       setGameLink(link);
       setGameState('waiting');
       setPlayers([{ name: 'You', wpm: 0, accuracy: 0, status: 'waiting' }]);
