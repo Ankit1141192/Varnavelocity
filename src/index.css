@@ -1,1 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=Playfair:ital,opsz,wght@0,5..1200,300..900;1,5..1200,300..900&display=swap');
 @import "tailwindcss";
+
+*{
+    font-family:"Outfit";
+}
+.font-playfair{
+    font-family:Playfair !important;
+}
+@theme{
+
+    --text-color:#000000;
+    --background-color:#ffffff;
+    --primary-color:#000000;
+    --secondary-color:#ffffff;
+    --accent-color:#000000;
+    --border-radius:0.5rem;
+    --box-shadow:0 0 10px rgba(0, 0, 0, 0.1);
+    --transition-duration:0.3s;
+    --transition-timing-function:ease-in-out;
+    --transition-property:all;
+    --transition-delay:0s;
+    --transition:var(--transition-property) var(--transition-duration) var(--transition-timing-function) var(--transition-delay);
+    --hover-color:#000000;
+    --focus-color:#000000;
+}   
+.img-black {
+    filter: brightness(0) saturate(100%);
+  }
+  
