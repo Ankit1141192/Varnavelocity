@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { RefreshCw } from "lucide-react";
 
 const easyWords = ["cat", "dog", "sun", "fun", "bat", "hat", "run", "big", "red", "car", "book", "tree", "house", "water", "happy", "quick", "jump", "play", "love", "time"];
 const hardWords = ["encyclopedia", "juxtaposition", "phenomenon", "metamorphosis", "extraordinary", "magnificent", "sophisticated", "revolutionary", "philosophical", "psychological"];
@@ -25,7 +26,7 @@ const SoloPractice = () => {
     for (let i = 0; i < 8; i++) {
       const sentenceLength = Math.floor(Math.random() * 8) + 5; // 5-12 words per sentence
       const sentence = [];
-      
+
       for (let j = 0; j < sentenceLength; j++) {
         let word;
         const rand = Math.random();
@@ -38,7 +39,7 @@ const SoloPractice = () => {
         }
         sentence.push(word);
       }
-      
+
       sentences.push(sentence.join(" ") + ".");
     }
     return sentences.join(" ");
@@ -67,12 +68,12 @@ const SoloPractice = () => {
   }, [isStarted, timeLeft]);
 
   const calculateFinalStats = () => {
-    const timeElapsed = (timeLimit - timeLeft) / 60; 
+    const timeElapsed = (timeLimit - timeLeft) / 60;
     if (timeElapsed > 0) {
       const wordsTyped = correctChars / 5;
       const finalWpm = Math.round(wordsTyped / timeElapsed);
       const finalAccuracy = totalChars > 0 ? Math.round((correctChars / totalChars) * 100) : 100;
-      
+
       setWpm(finalWpm);
       setAccuracy(finalAccuracy);
     }
@@ -80,43 +81,43 @@ const SoloPractice = () => {
 
   const handleKeyPress = (e) => {
     if (isFinished) return;
-    
+
     if (!isStarted) {
       setIsStarted(true);
     }
 
     const key = e.key;
-    
+
     // Ignore Enter key
     if (key === 'Enter') {
       e.preventDefault();
       return;
     }
-    
+
     if (key === 'Backspace') {
       if (currentIndex > 0) {
         const newIndex = currentIndex - 1;
         const newTypedChars = [...typedChars];
         const newErrorPositions = new Set(errorPositions);
-        
+
         // Remove the character from tracking
         newTypedChars.pop();
-        
+
         // If this position had an error, remove it and decrease error count
         if (errorPositions.has(newIndex)) {
           newErrorPositions.delete(newIndex);
           setErrors(prev => prev - 1);
         }
-        
+
         setCurrentIndex(newIndex);
         setTypedChars(newTypedChars);
         setErrorPositions(newErrorPositions);
         setTotalChars(prev => prev - 1);
-        
+
         // Recalculate correct chars
         const correctCount = newTypedChars.filter((char, idx) => char === text[idx]).length;
         setCorrectChars(correctCount);
-        
+
         // Recalculate stats
         updateStats(correctCount, newTypedChars.length);
       }
@@ -124,18 +125,18 @@ const SoloPractice = () => {
     }
 
     if (key.length !== 1) return; // Ignore other special keys
-    
+
     // Prevent typing beyond the text length
     if (currentIndex >= text.length) return;
-    
+
     const expectedChar = text[currentIndex];
     const newTypedChars = [...typedChars, key];
     const newErrorPositions = new Set(errorPositions);
-    
+
     setTypedChars(newTypedChars);
     setCurrentIndex(prev => prev + 1);
     setTotalChars(prev => prev + 1);
-    
+
     if (key === expectedChar) {
       setCorrectChars(prev => prev + 1);
       // Remove error position if it was previously marked as error
@@ -150,9 +151,9 @@ const SoloPractice = () => {
         setErrors(prev => prev + 1);
       }
     }
-    
+
     setErrorPositions(newErrorPositions);
-    
+
     // Update real-time stats
     const correctCount = key === expectedChar ? correctChars + 1 : correctChars;
     updateStats(correctCount, totalChars + 1);
@@ -164,7 +165,7 @@ const SoloPractice = () => {
       const wordsTyped = correctCount / 5;
       const currentWpm = Math.round(wordsTyped / timeElapsed);
       const currentAccuracy = Math.round((correctCount / totalCount) * 100);
-      
+
       setWpm(currentWpm);
       setAccuracy(currentAccuracy);
     } else if (totalCount > 0) {
@@ -192,20 +193,20 @@ const SoloPractice = () => {
 
   const renderText = () => {
     return text.split('').map((char, index) => {
-      let className = "text-gray-400"; // Default for untyped characters
-      
+      let className = "text-gray-400";
+
       if (index < typedChars.length) {
         // Character has been typed
         if (typedChars[index] === char) {
-          className = "text-green-700 bg-green-100"; // Correct character
+          className = "text-green-700 bg-green-100";
         } else {
-          className = "text-white bg-red-500"; // Wrong character - highlighted in red
+          className = "text-white bg-red-500";
         }
       } else if (index === currentIndex) {
         // Current character cursor
         className = "bg-blue-300 border-l-2 border-blue-600 animate-pulse";
       }
-      
+
       return (
         <span key={index} className={`${className} ${char === ' ' ? 'mr-1' : ''}`}>
           {char === ' ' ? '\u00A0' : char}
@@ -221,25 +222,8 @@ const SoloPractice = () => {
   }, [isFinished]);
 
   return (
-    <div className="bg-white border rounded-lg p-6 shadow-lg max-w-4xl mx-auto mt-8">
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Select Time Duration:</label>
-        <select
-          className="p-3 border rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          value={timeLimit / 60}
-          onChange={(e) => {
-            const minutes = Number(e.target.value);
-            setTimeLimit(minutes * 60);
-            setTimeLeft(minutes * 60);
-            resetTest();
-          }}
-          disabled={isStarted && !isFinished}
-        >
-          {[1, 2, 3, 5, 10, 15].map((min) => (
-            <option key={min} value={min}>{min} minute{min > 1 ? 's' : ''}</option>
-          ))}
-        </select>
-      </div>
+    <div className="max-w-2xl mx-auto p-6 bg-white rounded shadow mt-8 select-none">
+
 
       {isFinished ? (
         <div className="text-center">
@@ -276,23 +260,37 @@ const SoloPractice = () => {
       ) : (
         <>
           <div className="flex justify-between items-center mb-6 p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-center space-x-6">
-              <div className="text-2xl font-mono font-bold text-gray-800">
-                ⏱️ {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
-              </div>
-              <div className="text-lg text-blue-600 font-medium">{wpm} WPM</div>
-              <div className="text-lg text-green-600 font-medium">{accuracy}% Accuracy</div>
-              <div className="text-lg text-red-600 font-medium">{errors} Errors</div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Select Time Duration:</label>
+              <select
+                className="p-3 border rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={timeLimit / 60}
+                onChange={(e) => {
+                  const minutes = Number(e.target.value);
+                  setTimeLimit(minutes * 60);
+                  setTimeLeft(minutes * 60);
+                  resetTest();
+                }}
+                disabled={isStarted && !isFinished}
+              >
+                {[1, 2, 3, 5, 10, 15].map((min) => (
+                  <option key={min} value={min}>{min} minute{min > 1 ? 's' : ''}</option>
+                ))}
+              </select>
             </div>
-            <button
-              onClick={resetTest}
-              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200 font-medium"
-            >
-              Reset
-            </button>
+            <div className="flex items-center space-x-6">
+              <button
+                onClick={resetTest}
+                className="flex gap-1 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200 font-medium"
+              >
+                <RefreshCw />{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+              </button>
+              <div className="text-lg text-blue-600 font-medium">{wpm} WPM</div>
+            </div>
+
           </div>
 
-          <div 
+          <div
             ref={containerRef}
             className="bg-gray-50 p-6 rounded-lg font-mono text-lg leading-relaxed mb-6 min-h-[200px] border-2 border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-text"
             tabIndex={0}
@@ -304,8 +302,8 @@ const SoloPractice = () => {
 
           <div className="text-center text-gray-600">
             <p className="text-sm">
-              {isStarted 
-                ? "Keep typing! Use Backspace to correct mistakes. Wrong letters are highlighted in red." 
+              {isStarted
+                ? "Keep typing! Use Backspace to correct mistakes. Wrong letters are highlighted in red."
                 : "Click on the text area above and start typing to begin the test."
               }
             </p>
