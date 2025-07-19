@@ -7,6 +7,7 @@ import Footer from './components/Footer';
 import Learning from './pages/Learning';
 import Pricing from "./pages/Pricing"
 import SoloPractice from './pages/SoloPractice';
+import Typingkeyboard from './components/Typingkeyboard';
 
 const App = () => {
   return (
@@ -19,6 +20,7 @@ const App = () => {
           <Route path='/learning' element = {<Learning/>}/>
           <Route path='/pricing' element = {<Pricing/>}/>
           <Route path='/typingtest' element = {<SoloPractice/>}/>
+          <Route path='/typingkeyboard' element={<Typingkeyboard />} />
         </Routes>
       </div>
 
