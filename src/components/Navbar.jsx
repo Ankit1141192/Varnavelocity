@@ -61,7 +61,7 @@ const Navbar = () => {
           <NavLink to="/typingtest" className={navLinkStyle}>Solo Practice</NavLink>
           <NavLink to="/learning" className={navLinkStyle}>Learning</NavLink>
           <NavLink to="/pricing" className={navLinkStyle}>Pricing</NavLink>
-          <NavLink to="/colloborationos" className={navLinkStyle}>Invite Friends</NavLink>
+          <NavLink to="/colloborations" className={navLinkStyle}>Invite Friends</NavLink>
         </nav>
 
         {/* Right-side Buttons */}

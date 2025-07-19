@@ -1,6 +1,7 @@
 import React from 'react';
 import logo from '../assets/logo1.png';
 
+
 const Footer = () => {
   return (
     <footer className="px-6 md:px-16 lg:px-24 xl:px-32 w-full">
@@ -42,7 +43,7 @@ const Footer = () => {
           <div>
             <h2 className="font-semibold text-gray-900 mb-4">RESOURCES</h2>
             <ul className="text-sm text-gray-500 space-y-2">
-              <li><a href="#">Learning</a></li>
+              <li><a href="/learning">Learning</a></li>
               <li><a href="#">Tutorials</a></li>
               <li><a href="#">Blog</a></li>
               <li><a href="#">Community</a></li>
