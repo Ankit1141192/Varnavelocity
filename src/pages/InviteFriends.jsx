@@ -25,7 +25,7 @@ const InviteFriends = () => {
   const [leaderboard, setLeaderboard] = useState([]);
 
   const createGame = () => {
-    const link = `https://yourgameurl.com/game/${Math.random()
+    const link = `https://varnavelocity.vercel.app/game/${Math.random()
       .toString(36)
       .substr(2, 9)}`;
     setGameLink(link);
