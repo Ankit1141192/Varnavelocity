@@ -38,7 +38,10 @@ const Navbar = () => {
 
       <header className="flex items-center justify-between px-6 py-3 md:py-4 shadow max-w-5xl rounded-full mx-auto w-full bg-white relative z-50">
         {/* Logo */}
-        <img src={logo} alt="Logo" className="h-14 w-auto object-contain" />
+        <NavLink to="/" className={navLinkStyle}>
+           <img src={logo} alt="Logo" className="h-14 w-auto object-contain" />
+          </NavLink>
+        
 
         {/* Nav Menu */}
         <nav
