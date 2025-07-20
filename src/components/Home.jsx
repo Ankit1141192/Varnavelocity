@@ -1,12 +1,4 @@
-// import React from 'react'
 
-// function Home() {
-//   return (
-//     <div>Home</div>
-//   )
-// }
-
-// export default Home
 import React, { useState } from 'react';
 
 function Home() {
@@ -77,7 +69,7 @@ function Home() {
             />
 
             {/* Overlay Name & Speed */}
-            <div className="absolute top-[52%] left-[50%] transform -translate-x-1/2 -translate-y-1/2 text-center m-10 ">
+            <div className="absolute top-[52%] left-[50%] transform -translate-x-1/2 -translate-y-1/2 text-center m-10">
               <p className="text-xl font-semibold text-black">{userName}</p>
               <p className="text-sm text-gray-800 mt-1">Typing Speed: {typingSpeed}%</p>
             </div>
@@ -94,7 +86,6 @@ function Home() {
               <h2 className="text-xl font-semibold text-blue-900">Typing Test</h2>
               <p className="text-sm text-blue-700 mt-1">Improve your typing skills with Vernavelocity</p>
               <div className="flex items-center bg-gray-200 mt-4 px-3 py-2 rounded-md gap-2 text-gray-600">
-                <span>🔒</span>
                 <span className="flex-1">Default</span>
                 <span>🔄</span>
               </div>
@@ -113,7 +104,6 @@ function Home() {
               <h2 className="text-xl font-semibold text-blue-900">Test with your friends</h2>
               <p className="text-sm text-blue-700 mt-1">Create your own typing test and play with your friends</p>
               <div className="flex items-center bg-gray-200 mt-4 px-3 py-2 rounded-md gap-2 text-gray-600">
-                <span>🔒</span>
                 <span className="flex-1">Default</span>
                 <span>🔄</span>
               </div>
@@ -124,12 +114,62 @@ function Home() {
           </div>
         </div>
       </div>
+
+      {/* Leaderboard Section */}
+      <div className="bg-white py-10 px-4 mt-10">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">🏆 Leaderboard</h2>
+          <div className="divide-y divide-gray-200 shadow-lg rounded-xl overflow-hidden">
+            {[
+              {
+                id: 1,
+                name: 'Anit Baranwal',
+                wpm: 92,
+                accuracy: 97,
+                avatar: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Anit',
+              },
+              {
+                id: 2,
+                name: 'Aarav Kumar',
+                wpm: 85,
+                accuracy: 94,
+                avatar: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Aarav',
+              },
+              {
+                id: 3,
+                name: 'Priya Sharma',
+                wpm: 81,
+                accuracy: 91,
+                avatar: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Priya',
+              },
+              {
+                id: 4,
+                name: 'Raj Patel',
+                wpm: 77,
+                accuracy: 89,
+                avatar: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Raj',
+              },
+            ].map((user, index) => (
+              <div key={user.id} className="flex items-center justify-between p-4 hover:bg-gray-50">
+                <div className="flex items-center gap-4">
+                  <span className="text-lg font-bold w-8 text-center text-yellow-500">
+                    {['🥇', '🥈', '🥉'][index] || `#${index + 1}`}
+                  </span>
+                  <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full" />
+                  <div>
+                    <p className="font-semibold text-gray-800">{user.name}</p>
+                    <p className="text-sm text-gray-500">Accuracy: {user.accuracy}%</p>
+                  </div>
+                </div>
+                <p className="text-lg font-semibold text-blue-600">{user.wpm} WPM</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 export default Home;
-
-
-
 

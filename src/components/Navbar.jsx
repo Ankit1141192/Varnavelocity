@@ -55,7 +55,7 @@ const Navbar = () => {
           <NavLink to="/pricing" className={navLinkStyle}>
             Pricing
           </NavLink>
-          <NavLink to="/colloborationos" className={navLinkStyle}>
+          <NavLink to="/colloboration" className={navLinkStyle}>
             Invite Friends
           </NavLink>
 
