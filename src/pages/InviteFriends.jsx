@@ -1,225 +1,197 @@
-import React, { useState } from "react";
-import { Users, Send, Copy, Trophy } from "lucide-react";
+// InviteFriends.jsx
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { db } from "../firebase";
+import { ref, set, onValue, remove } from "firebase/database";
 
-// Optional: replace this with your own solo test component
-const SoloTypingTest = () => (
-  <div className="p-4 bg-gray-100 rounded text-center">
-    <p>Typing test is in progress...</p>
-  </div>
-);
+function InviteFriends({ theme }) {
+  const { roomId: paramRoomId } = useParams();
+  const [roomId, setRoomId] = useState(paramRoomId || "");
+  const [userName, setUserName] = useState("");
+  const [joined, setJoined] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [speed, setSpeed] = useState(0);
+  const [userId] = useState(() => crypto.randomUUID());
+  const [isCreator, setIsCreator] = useState(false);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
-// Example theme
-const currentTheme = {
-  cardBg: "bg-white",
-  border: "border-gray-300",
-  text: "text-gray-800",
-  accent: "bg-indigo-600",
-  bg: "bg-gray-100",
-};
+  const navigate = useNavigate();
 
-const InviteFriends = () => {
-  const [gameState, setGameState] = useState("setup"); // setup, waiting, playing, finished
-  const [email, setEmail] = useState("");
-  const [gameLink, setGameLink] = useState("");
-  const [players, setPlayers] = useState([]);
-  const [leaderboard, setLeaderboard] = useState([]);
-
-  const createGame = () => {
-    const link = `https://varnavelocity.vercel.app/${Math.random()
-      .toString(36)
-      .substr(2, 9)}`;
-    setGameLink(link);
-    setGameState("waiting");
-    setPlayers([{ name: "You", wpm: 0, accuracy: 0, status: "waiting" }]);
+  // Create Room
+  const createRoom = () => {
+    const id = Math.random().toString(36).substring(2, 8);
+    setRoomId(id);
+    setIsCreator(true);
+    navigate(`/collaborations/${id}`);
   };
 
-  const invitePlayer = () => {
-    if (email) {
-      setPlayers((prev) => [
-        ...prev,
-        { name: email, wpm: 0, accuracy: 0, status: "invited" },
-      ]);
-      setEmail("");
+  // Join Room
+  const handleJoin = async () => {
+    if (!userName || !roomId) {
+      alert("Enter your name and room ID.");
+      return;
     }
+    const userRef = ref(db, `rooms/${roomId}/users/${userId}`);
+    await set(userRef, { userName, speed: 0, accuracy: 100 });
+    setJoined(true);
   };
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(gameLink);
+  // Simulate Typing (Replace with actual logic)
+  const handleTyping = () => {
+    const newSpeed = Math.floor(Math.random() * 60) + 40;
+    setSpeed(newSpeed);
+    const speedRef = ref(db, `rooms/${roomId}/users/${userId}`);
+    set(speedRef, { userName, speed: newSpeed, accuracy: 90 });
   };
 
+  // Start Game
   const startGame = () => {
-    setGameState("playing");
-    setPlayers((prev) =>
-      prev.map((p) => ({ ...p, status: "playing" }))
-    );
+    setGameStarted(true);
   };
 
-  const finishGame = () => {
-    setGameState("finished");
-    const finalResults = players
-      .map((p) => ({
-        ...p,
-        wpm: Math.floor(Math.random() * 60) + 20,
-        accuracy: Math.floor(Math.random() * 20) + 80,
-      }))
-      .sort((a, b) => b.wpm - a.wpm);
-    setLeaderboard(finalResults);
+  // End Game
+  const endGame = () => {
+    setShowLeaderboard(true);
   };
+
+  // Fetch users
+  useEffect(() => {
+    if (!roomId) return;
+    const usersRef = ref(db, `rooms/${roomId}/users`);
+    const unsubscribe = onValue(usersRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const userList = Object.entries(data).map(([id, user]) => ({
+          id,
+          ...user,
+        }));
+        setUsers(userList);
+      } else {
+        setUsers([]);
+      }
+    });
+
+    // Cleanup on unload
+    const cleanup = () => remove(ref(db, `rooms/${roomId}/users/${userId}`));
+    window.addEventListener("beforeunload", cleanup);
+    return () => {
+      cleanup();
+      window.removeEventListener("beforeunload", cleanup);
+    };
+  }, [roomId, userId]);
 
   return (
     <div
-      className={`${currentTheme.cardBg} ${currentTheme.border} border rounded-lg p-6 m-6`}
+      className={`min-h-screen p-8 ${
+        theme === "dark" ? "bg-gray-900 text-white" : "bg-gray-100 text-black"
+      }`}
     >
-      {gameState === "setup" && (
-        <div className="text-center">
-          <Users className="w-16 h-16 mx-auto mb-4 text-blue-500" />
-          <h2 className={`text-2xl font-bold ${currentTheme.text} mb-6`}>
-            Create Multiplayer Game
-          </h2>
-          <button
-            onClick={createGame}
-            className={`${currentTheme.accent} text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity`}
-          >
-            Create Game Room
-          </button>
-        </div>
-      )}
-
-      {gameState === "waiting" && (
-        <div>
-          <h2 className={`text-2xl font-bold ${currentTheme.text} mb-6`}>
-            Invite Players
-          </h2>
-
-          <div className="mb-6">
-            <div className="flex mb-4">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter email to invite"
-                className={`flex-1 p-3 ${currentTheme.bg} ${currentTheme.text} ${currentTheme.border} border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
-              />
-              <button
-                onClick={invitePlayer}
-                className={`${currentTheme.accent} text-white px-4 py-3 rounded-r-lg hover:opacity-90 transition-opacity`}
-              >
-                <Send className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex">
-              <input
-                type="text"
-                value={gameLink}
-                readOnly
-                className={`flex-1 p-3 ${currentTheme.bg} ${currentTheme.text} ${currentTheme.border} border rounded-l-lg`}
-              />
-              <button
-                onClick={copyLink}
-                className={`${currentTheme.accent} text-white px-4 py-3 rounded-r-lg hover:opacity-90 transition-opacity`}
-              >
-                <Copy className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <h3
-              className={`text-lg font-semibold ${currentTheme.text} mb-3`}
-            >
-              Players ({players.length})
-            </h3>
-            <div className="space-y-2">
-              {players.map((player, index) => (
-                <div
-                  key={index}
-                  className={`${currentTheme.bg} p-3 rounded-lg flex justify-between items-center`}
-                >
-                  <span className={currentTheme.text}>{player.name}</span>
-                  <span
-                    className={`text-sm px-2 py-1 rounded ${
-                      player.status === "waiting"
-                        ? "bg-yellow-500"
-                        : "bg-gray-500"
-                    } text-white`}
-                  >
-                    {player.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <button
-            onClick={startGame}
-            className={`w-full ${currentTheme.accent} text-white py-3 rounded-lg hover:opacity-90 transition-opacity`}
-          >
-            Start Game
-          </button>
-        </div>
-      )}
-
-      {gameState === "playing" && (
-        <div>
-          <h2 className={`text-2xl font-bold ${currentTheme.text} mb-6`}>
-            Game in Progress
-          </h2>
-          <SoloTypingTest />
-          <div className="mt-4 text-center">
+      {!joined ? (
+        <div className="max-w-md mx-auto bg-white p-6 shadow rounded">
+          {!roomId && (
             <button
-              onClick={finishGame}
-              className={`${currentTheme.accent} text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity`}
+              onClick={createRoom}
+              className="bg-indigo-600 text-white w-full py-2 rounded mb-4"
             >
-              Finish Game
+              Create Game Room
             </button>
-          </div>
-        </div>
-      )}
-
-      {gameState === "finished" && (
-        <div>
-          <Trophy className="w-16 h-16 mx-auto mb-4 text-yellow-500" />
-          <h2
-            className={`text-2xl font-bold ${currentTheme.text} mb-6 text-center`}
+          )}
+          <input
+            placeholder="Room ID"
+            value={roomId}
+            onChange={(e) => setRoomId(e.target.value)}
+            className="w-full p-2 border mb-3 rounded"
+          />
+          <input
+            placeholder="Your Name"
+            value={userName}
+            onChange={(e) => setUserName(e.target.value)}
+            className="w-full p-2 border mb-3 rounded"
+          />
+          <button
+            className="bg-blue-600 text-white w-full py-2 rounded"
+            onClick={handleJoin}
           >
-            Game Results
-          </h2>
+            Join Room
+          </button>
+          {roomId && (
+            <p className="text-sm text-gray-400 mt-2">
+              Share this link:{" "}
+              <code className="bg-gray-200 px-1 rounded">
+                https://varnavelocity.vercel.app/collaborations/{roomId}
+              </code>
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-xl font-bold mb-4">Room: {roomId}</h2>
 
-          <div className="space-y-3">
-            {leaderboard.map((player, index) => (
+          <div className="grid md:grid-cols-2 gap-4">
+            {users.map((user) => (
               <div
-                key={index}
-                className={`${currentTheme.bg} p-4 rounded-lg flex justify-between items-center`}
+                key={user.id}
+                className="bg-white p-4 rounded shadow text-center"
               >
-                <div className="flex items-center">
-                  <div
-                    className={`w-8 h-8 rounded-full ${
-                      index === 0
-                        ? "bg-yellow-500"
-                        : index === 1
-                        ? "bg-gray-400"
-                        : "bg-orange-500"
-                    } flex items-center justify-center text-white font-bold mr-3`}
-                  >
-                    {index + 1}
-                  </div>
-                  <span
-                    className={`font-semibold ${currentTheme.text}`}
-                  >
-                    {player.name}
-                  </span>
-                </div>
-                <div className={`text-sm ${currentTheme.text}`}>
-                  {player.wpm} WPM | {player.accuracy}%
-                </div>
+                <p className="font-bold cursor-pointer" onClick={() => setUserName(user.userName)}>{user.userName}</p>
+                <p className="text-sm text-gray-500">
+                  Speed: {user.speed || 0} WPM
+                </p>
               </div>
             ))}
           </div>
+
+          {!gameStarted && isCreator && (
+            <button
+              onClick={startGame}
+              className="mt-6 bg-green-600 text-white px-4 py-2 rounded"
+            >
+              Start Game
+            </button>
+          )}
+
+          {gameStarted && !showLeaderboard && (
+            <div className="mt-6 text-center">
+              <button
+                onClick={handleTyping}
+                className="bg-blue-600 text-white px-4 py-2 rounded mr-2"
+              >
+                Simulate Typing Speed
+              </button>
+              <button
+                onClick={endGame}
+                className="bg-red-600 text-white px-4 py-2 rounded"
+              >
+                Finish Game
+              </button>
+            </div>
+          )}
+
+          {showLeaderboard && (
+            <div className="mt-8">
+              <h3 className="text-2xl font-bold mb-4">Leaderboard</h3>
+              <div className="space-y-2">
+                {[...users]
+                  .sort((a, b) => b.speed - a.speed)
+                  .map((user, index) => (
+                    <div
+                      key={user.id}
+                      className="bg-white p-3 rounded shadow flex justify-between"
+                    >
+                      <span>
+                        {index + 1}. {user.userName}
+                      </span>
+                      <span>{user.speed} WPM</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
-};
+}
 
 export default InviteFriends;

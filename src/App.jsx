@@ -23,7 +23,8 @@ const App = () => {
           <Route path="/learning" element={<Learning />} theme={theme} />
           <Route path="/pricing" element={<Pricing />} theme={theme} />
           <Route path="/typingtest" element={<SoloPractice theme={theme} />} />
-          <Route path="/colloborations" element={<InviteFriends />}theme={theme} />
+          <Route path="/colloborations" element={<InviteFriends/>}theme={theme} />
+          <Route path="/collaborations/:roomId" element={<InviteFriends theme={theme} />} />
         </Routes>
       </div>
 
