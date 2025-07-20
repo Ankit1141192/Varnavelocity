@@ -354,7 +354,7 @@ const SoloPractice = () => {
         <>
           <div
             ref={containerRef}
-            className="bg-gray-50 p-6 rounded-lg font-mono text-lg leading-relaxed mb-6 min-h-[400px] max-h-[400px] overflow-y-auto border-2 border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-text"
+            className="relative bg-gray-50 p-6 rounded-lg font-mono text-lg leading-relaxed mb-6 min-h-[300px] max-h-[300px] overflow-y-auto border-2 border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-text"
             tabIndex={0}
             onKeyDown={handleKeyPress}
             style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}
