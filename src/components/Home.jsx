@@ -1,5 +1,5 @@
-
 import React, { useState } from 'react';
+import Testimonials from '../pages/Testimonials';
 
 function Home() {
   const [typingSpeed, setTypingSpeed] = useState(20);
@@ -30,7 +30,7 @@ function Home() {
         </div>
       </div>
 
-      {/* Progress + Print + Name Input */}
+      {/* Typing Progress & Certificate */}
       <div className="flex flex-col items-center justify-center px-4 -mt-6 mb-8">
         <div className="w-[90%] max-w-4xl">
           <div className="flex items-center gap-4 mb-2 flex-wrap">
@@ -41,7 +41,7 @@ function Home() {
               Print Your Certificate
             </button>
 
-            <p className="text-sm text-gray-700 ">Typing Progress: {typingSpeed}%</p>
+            <p className="text-sm text-gray-700">Typing Progress: {typingSpeed}%</p>
 
             <input
               type="text"
@@ -59,7 +59,7 @@ function Home() {
             ></div>
           </div>
 
-          {/* Dynamic Certificate */}
+          {/* Certificate Preview */}
           <div className="mt-4 flex justify-center relative">
             <img
               src="/typing-certificate.png"
@@ -67,9 +67,7 @@ function Home() {
               className="rounded-md border shadow-lg max-w-full"
               style={{ maxWidth: '600px' }}
             />
-
-            {/* Overlay Name & Speed */}
-            <div className="absolute top-[52%] left-[50%] transform -translate-x-1/2 -translate-y-1/2 text-center m-10 ">
+            <div className="absolute top-[52%] left-[50%] transform -translate-x-1/2 -translate-y-1/2 text-center m-10">
               <p className="text-xl font-semibold text-black">{userName}</p>
               <p className="text-sm text-gray-800 mt-1">Typing Speed: {typingSpeed}%</p>
             </div>
@@ -80,13 +78,11 @@ function Home() {
       {/* Typing Cards */}
       <div className="p-10 flex items-center justify-center bg-gray-100 px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-5xl w-full">
-          {/* Card 1 */}
           <div className="bg-white rounded-lg shadow-md p-6 flex flex-col justify-between">
             <div>
               <h2 className="text-xl font-semibold text-blue-900">Typing Test</h2>
               <p className="text-sm text-blue-700 mt-1">Improve your typing skills with Vernavelocity</p>
               <div className="flex items-center bg-gray-200 mt-4 px-3 py-2 rounded-md gap-2 text-gray-600">
-                <span>🔒</span>
                 <span className="flex-1">Default</span>
                 <span>🔄</span>
               </div>
@@ -99,13 +95,11 @@ function Home() {
             </button>
           </div>
 
-          {/* Card 2 */}
           <div className="bg-white rounded-lg shadow-md p-6 flex flex-col justify-between">
             <div>
               <h2 className="text-xl font-semibold text-blue-900">Test with your friends</h2>
               <p className="text-sm text-blue-700 mt-1">Create your own typing test and play with your friends</p>
               <div className="flex items-center bg-gray-200 mt-4 px-3 py-2 rounded-md gap-2 text-gray-600">
-                <span>🔒</span>
                 <span className="flex-1">Default</span>
                 <span>🔄</span>
               </div>
@@ -116,11 +110,45 @@ function Home() {
           </div>
         </div>
       </div>
+
+      {/* Leaderboard */}
+      <section className="bg-white py-14 px-4 mt-10 border-t border-gray-200">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl font-bold text-gray-800 mb-10">🏆 Leaderboard</h2>
+          <div className="divide-y divide-gray-200 shadow-lg rounded-xl overflow-hidden">
+            {[
+              { id: 1, name: 'Anit Baranwal', wpm: 92, accuracy: 97, avatar: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Anit' },
+              { id: 2, name: 'Aarav Kumar', wpm: 85, accuracy: 94, avatar: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Aarav' },
+              { id: 3, name: 'Priya Sharma', wpm: 81, accuracy: 91, avatar: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Priya' },
+              { id: 4, name: 'Raj Patel', wpm: 77, accuracy: 89, avatar: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Raj' },
+            ].map((user, index) => (
+              <div key={user.id} className="flex items-center justify-between p-4 hover:bg-gray-50">
+                <div className="flex items-center gap-4">
+                  <span className="text-lg font-bold w-8 text-center text-yellow-500">
+                    {['🥇', '🥈', '🥉'][index] || `#${index + 1}`}
+                  </span>
+                  <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full" />
+                  <div>
+                    <p className="font-semibold text-gray-800">{user.name}</p>
+                    <p className="text-sm text-gray-500">Accuracy: {user.accuracy}%</p>
+                  </div>
+                </div>
+                <p className="text-lg font-semibold text-blue-600">{user.wpm} WPM</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="bg-gray-50 py-16 px-4">
+        <div className="max-w-5xl mx-auto">
+          
+          <Testimonials />
+        </div>
+      </section>
     </div>
   );
 }
 
 export default Home;
-
-
-

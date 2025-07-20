@@ -1,26 +1,29 @@
-import React from 'react';
-import Navbar from './components/Navbar';
+// App.jsx
+import React, { useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 
 import Home from './components/Home';
-import Footer from './components/Footer';
 import Learning from './pages/Learning';
-import Pricing from "./pages/Pricing"
+import Pricing from './pages/Pricing';
 import SoloPractice from './pages/SoloPractice';
 import InviteFriends from './pages/InviteFriends';
 
 const App = () => {
+  const [theme, setTheme] = useState('light');
+
   return (
-    <div>
-      <Navbar />
+    <div className={theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}>
+      <Navbar theme={theme} setTheme={setTheme} />
 
       <div className="min-h-[70vh]">
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path='/learning' element = {<Learning/>}/>
-          <Route path='/pricing' element = {<Pricing/>}/>
-          <Route path='/typingtest' element = {<SoloPractice/>}/>
-          <Route path='/colloborations' element = {<InviteFriends/>}/>
+          <Route path="/" element={<Home />} theme={theme} />
+          <Route path="/learning" element={<Learning />} theme={theme} />
+          <Route path="/pricing" element={<Pricing />} theme={theme} />
+          <Route path="/typingtest" element={<SoloPractice theme={theme} />} />
+          <Route path="/colloborations" element={<InviteFriends />}theme={theme} />
         </Routes>
       </div>
 

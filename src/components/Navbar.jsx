@@ -3,14 +3,22 @@ import { useClerk, UserButton, useUser } from '@clerk/clerk-react';
 import { NavLink } from 'react-router-dom';
 import logo from '../assets/logo1.png';
 
-const Navbar = () => {
+const Navbar = ({ theme, setTheme }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { openSignIn } = useClerk();
   const { user } = useUser();
 
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
+  };
+
   const navLinkStyle = ({ isActive }) =>
     `hover:text-indigo-600 transition ${
-      isActive ? 'text-indigo-600 font-semibold' : 'text-gray-900'
+      isActive
+        ? 'text-indigo-600 font-semibold'
+        : theme === 'dark'
+        ? 'text-white'
+        : 'text-gray-900'
     }`;
 
   return (
@@ -28,14 +36,24 @@ const Navbar = () => {
         }
       `}</style>
 
-      <header className="flex items-center justify-between px-6 py-3 md:py-4 shadow max-w-5xl rounded-full mx-auto w-full bg-white relative z-50">
+      <header
+        className={`flex items-center justify-between px-6 py-3 md:py-4 shadow max-w-5xl rounded-full mx-auto w-full ${
+          theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
+        } relative z-50`}
+      >
         {/* Logo */}
         <NavLink to="/" className={navLinkStyle}>
           <img src={logo} alt="Logo" className="h-14 w-auto object-contain" />
         </NavLink>
 
         {/* Mobile Menu Overlay */}
-        <div className={`fixed inset-0 bg-white z-40 flex flex-col items-center justify-center gap-6 text-lg font-medium md:hidden transition-all duration-300 ${menuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
+        <div
+          className={`fixed inset-0 ${
+            theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-white'
+          } z-40 flex flex-col items-center justify-center gap-6 text-lg font-medium md:hidden transition-all duration-300 ${
+            menuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
+          }`}
+        >
           <NavLink to="/typingtest" className={navLinkStyle} onClick={() => setMenuOpen(false)}>
             Solo Practice
           </NavLink>
@@ -45,12 +63,19 @@ const Navbar = () => {
           <NavLink to="/pricing" className={navLinkStyle} onClick={() => setMenuOpen(false)}>
             Pricing
           </NavLink>
-          <NavLink to="/colloborationos" className={navLinkStyle} onClick={() => setMenuOpen(false)}>
+          <NavLink to="/collaborations" className={navLinkStyle} onClick={() => setMenuOpen(false)}>
             Invite Friends
           </NavLink>
           <button onClick={() => setMenuOpen(false)} className="text-gray-600 mt-4">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2"
-              viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -58,21 +83,46 @@ const Navbar = () => {
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex gap-8 text-sm font-normal">
-          <NavLink to="/typingtest" className={navLinkStyle}>Solo Practice</NavLink>
-          <NavLink to="/learning" className={navLinkStyle}>Learning</NavLink>
-          <NavLink to="/pricing" className={navLinkStyle}>Pricing</NavLink>
-          <NavLink to="/colloborations" className={navLinkStyle}>Invite Friends</NavLink>
+          <NavLink to="/typingtest" className={navLinkStyle}>
+            Solo Practice
+          </NavLink>
+          <NavLink to="/learning" className={navLinkStyle}>
+            Learning
+          </NavLink>
+          <NavLink to="/pricing" className={navLinkStyle}>
+            Pricing
+          </NavLink>
+          <NavLink to="/collaborations" className={navLinkStyle}>
+            Invite Friends
+          </NavLink>
         </nav>
 
         {/* Right-side Buttons */}
         <div className="flex items-center space-x-4">
-          <button className="size-8 flex items-center justify-center hover:bg-gray-100 transition border border-slate-300 rounded-md">
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-              <path d="M7.5 10.39a2.889 2.889 0 1 0 0-5.779 2.889 2.889 0 0 0 0 5.778M7.5 1v.722m0 11.556V14M1 7.5h.722m11.556 0h.723m-1.904-4.596-.511.51m-8.172 8.171-.51.511m-.001-9.192.51.51m8.173 8.171.51.511"
-                stroke="#353535" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          {/* Theme toggle using your custom SVG */}
+          <button
+            // onClick={toggleTheme}
+            className="size-8 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition border border-slate-300 rounded-md"
+            title="Toggle Theme"
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 15 15"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M7.5 10.39a2.889 2.889 0 1 0 0-5.779 2.889 2.889 0 0 0 0 5.778M7.5 1v.722m0 11.556V14M1 7.5h.722m11.556 0h.723m-1.904-4.596-.511.51m-8.172 8.171-.51.511m-.001-9.192.51.51m8.173 8.171.51.511"
+                stroke="#353535"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </button>
 
+          {/* Login / User */}
           {user ? (
             <UserButton afterSignOutUrl="/" />
           ) : (
@@ -86,10 +136,17 @@ const Navbar = () => {
             </div>
           )}
 
-          {/* Mobile menu open button */}
+          {/* Mobile menu toggle */}
           <button onClick={() => setMenuOpen(true)} className="md:hidden text-gray-600 z-50">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2"
-              viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>

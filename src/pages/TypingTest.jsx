@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { RefreshCw } from "lucide-react";
 
-
 const easyWords = ["cat", "dog", "sun", "fun", "bat", "hat", "run", "big", "red", "car", "book", "tree", "house", "water", "happy", "quick", "jump", "play", "love", "time"];
 const hardWords = ["encyclopedia", "juxtaposition", "phenomenon", "metamorphosis", "extraordinary", "magnificent", "sophisticated", "revolutionary", "philosophical", "psychological"];
 const commonWords = ["the", "and", "for", "are", "but", "not", "you", "all", "can", "her", "was", "one", "our", "had", "by", "word", "oil", "sit", "set", "run", "eat", "far", "sea", "eye", "ask", "own", "age", "ice", "end", "why", "let", "try", "way", "use", "man", "new", "now", "old", "see", "him", "two", "how", "its", "who", "did", "get", "may", "say", "she", "use", "her", "how", "oil", "sit"];
 
-const SoloPractice = ({theme}) => {
+const TypingTest = () => {
   const [text, setText] = useState("");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isStarted, setIsStarted] = useState(false);
@@ -88,6 +87,7 @@ const SoloPractice = ({theme}) => {
     }
   };
 
+  // Improved scrolling function that only scrolls when necessary
   const scrollToCurrentPosition = () => {
     if (containerRef.current) {
       const container = containerRef.current;
@@ -99,10 +99,15 @@ const SoloPractice = ({theme}) => {
         const cursorTop = cursorElement.offsetTop;
         const cursorHeight = cursorElement.offsetHeight;
         
-        // Check if cursor is outside visible area
-        if (cursorTop < scrollTop + 20 || cursorTop + cursorHeight > scrollTop + containerHeight - 20) {
-          // Scroll to keep cursor in middle of visible area
-          container.scrollTop = Math.max(0, cursorTop - containerHeight / 2);
+        // Only scroll if cursor is getting close to edges (more conservative scrolling)
+        const buffer = 60; // Increased buffer to prevent frequent scrolling
+        
+        if (cursorTop < scrollTop + buffer) {
+          // Cursor is too close to top, scroll up slightly
+          container.scrollTop = Math.max(0, cursorTop - buffer);
+        } else if (cursorTop + cursorHeight > scrollTop + containerHeight - buffer) {
+          // Cursor is too close to bottom, scroll down slightly
+          container.scrollTop = cursorTop - containerHeight + buffer + cursorHeight;
         }
       }
     }
@@ -117,13 +122,19 @@ const SoloPractice = ({theme}) => {
 
     const key = e.key;
 
-    // Ignore Enter key and other special keys except Backspace
+    // Handle space key properly - don't prevent default, just treat it as a regular character
     if (key === 'Enter' || (key.length !== 1 && key !== 'Backspace')) {
-      e.preventDefault();
-      return;
+      // Only prevent Enter and other special keys, but allow space
+      if (key === 'Enter') {
+        e.preventDefault();
+      }
+      if (key.length !== 1 && key !== 'Backspace') {
+        return;
+      }
     }
 
     if (key === 'Backspace') {
+      e.preventDefault(); // Prevent browser back navigation
       if (currentIndex > 0) {
         const newIndex = currentIndex - 1;
         const newTypedChars = [...typedChars];
@@ -150,7 +161,7 @@ const SoloPractice = ({theme}) => {
         // Update stats with recalculated values - but don't change overall accuracy
         updateStats(correctCount, newTypedChars.length);
         
-        // Scroll to maintain cursor visibility
+        // Only scroll if we're near the edges
         setTimeout(scrollToCurrentPosition, 0);
       }
       return;
@@ -196,7 +207,7 @@ const SoloPractice = ({theme}) => {
     // Update real-time stats with correct values
     updateStats(newCorrectChars, newTotalChars);
     
-    // Scroll to maintain cursor visibility
+    // Only scroll when necessary and less aggressively
     setTimeout(scrollToCurrentPosition, 0);
   };
 
@@ -232,6 +243,8 @@ const SoloPractice = ({theme}) => {
     setTypedChars([]);
     setErrorPositions(new Set());
     setIsFinished(false);
+    setTotalKeystrokes(0);
+    setCorrectKeystrokes(0);
     if (containerRef.current) {
       containerRef.current.focus();
       containerRef.current.scrollTop = 0; // Reset scroll position
@@ -268,31 +281,10 @@ const SoloPractice = ({theme}) => {
     }
   }, [isFinished]);
 
-  useEffect(() => {
-  const handleSpacePreventScroll = (e) => {
-    if (
-      e.code === 'Space' &&
-      document.activeElement === containerRef.current &&
-      isStarted &&
-      !isFinished
-    ) {
-      e.preventDefault();
-    }
-  };
-
-  window.addEventListener("keydown", handleSpacePreventScroll);
-
-  return () => {
-    window.removeEventListener("keydown", handleSpacePreventScroll);
-  };
-}, [isStarted, isFinished]);
-
   return (
-    
-    <div className=" max-w-4xl mx-auto p-6 bg-white rounded shadow mt-8 select-none">
-       
+    <div className="max-w-4xl mx-auto p-6 bg-white rounded shadow mt-8 select-none">
       {/* Fixed Header - Always visible */}
-      <div className=" bg-white z-10 border-b pb-4 mb-6">
+      <div className="sticky top-0 bg-white z-10 border-b pb-4 mb-6">
         <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">Select Time Duration:</label>
@@ -376,7 +368,7 @@ const SoloPractice = ({theme}) => {
         <>
           <div
             ref={containerRef}
-            className="bg-gray-50 p-6 rounded-lg font-mono text-lg leading-relaxed mb-6 min-h-[300px] max-h-[300px] overflow-y-auto border-2 border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 cursor-text"
+            className="bg-gray-50 p-6 rounded-lg font-mono text-lg leading-relaxed mb-6 min-h-[300px] max-h-[300px] overflow-y-auto border-2 border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-text"
             tabIndex={0}
             onKeyDown={handleKeyPress}
             style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}
@@ -397,10 +389,8 @@ const SoloPractice = ({theme}) => {
           </div>
         </>
       )}
-      
     </div>
-    
   );
 };
 
-export default SoloPractice;
+export default TypingTest;
