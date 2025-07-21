@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
-
-// Mock Firebase functions for demo (replace with actual Firebase imports)
-const mockDb = {};
-const mockUsers = {};
+import { useParams } from "react-router-dom";
+import { db } from "../firebase"; // Adjust path as needed
+import { ref, set, onValue, push, serverTimestamp, off } from "firebase/database";
 
 function InviteFriends({ theme = "light" }) {
-  const [roomId, setRoomId] = useState("");
+  const { roomId: urlRoomId } = useParams(); // Get roomId from URL if available
+  
+  const [roomId, setRoomId] = useState(urlRoomId || "");
   const [userName, setUserName] = useState("");
   const [joined, setJoined] = useState(false);
   const [users, setUsers] = useState([]);
@@ -18,6 +19,9 @@ function InviteFriends({ theme = "light" }) {
   const [typedText, setTypedText] = useState("");
   const [startTime, setStartTime] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [roomExists, setRoomExists] = useState(true);
+  const [joinError, setJoinError] = useState("");
+  const [isJoining, setIsJoining] = useState(false);
   
   // Random words for typing test
   const wordBank = [
@@ -41,86 +45,130 @@ function InviteFriends({ theme = "light" }) {
     return shuffled.slice(0, numWords).join(" ");
   };
 
-  const createRoom = () => {
+  const createRoom = async () => {
     const id = Math.random().toString(36).substring(2, 8).toLowerCase();
     setRoomId(id);
     setIsCreator(true);
-    // Initialize room in mock storage
-    mockDb[id] = { users: {}, gameStarted: false };
+    
+    try {
+      // Create room in Firebase with creator info
+      await set(ref(db, `rooms/${id}`), {
+        creator: userId,
+        gameStarted: false,
+        gameText: "",
+        createdAt: serverTimestamp(),
+        users: {}
+      });
+      
+      console.log("Room created successfully:", id);
+    } catch (error) {
+      console.error("Error creating room:", error);
+      alert("Error creating room. Please try again.");
+    }
   };
 
   const handleJoin = async () => {
     if (!userName.trim()) {
-      alert("Please enter your name.");
+      setJoinError("Please enter your name.");
       return;
     }
     if (!roomId.trim()) {
-      alert("Please enter a room ID.");
+      setJoinError("Please enter a room ID.");
       return;
     }
 
+    setIsJoining(true);
+    setJoinError("");
+
     try {
-      // Initialize room if it doesn't exist
-      if (!mockDb[roomId]) {
-        mockDb[roomId] = { users: {}, gameStarted: false };
+      const roomRef = ref(db, `rooms/${roomId}`);
+      
+      // Check if room exists first
+      const roomSnapshot = await new Promise((resolve) => {
+        onValue(roomRef, resolve, { onlyOnce: true });
+      });
+
+      if (!roomSnapshot.exists()) {
+        setJoinError("Room not found. Please check the room ID.");
+        setRoomExists(false);
+        setIsJoining(false);
+        return;
+      }
+
+      const roomData = roomSnapshot.val();
+      
+      // Check if user is the creator
+      if (roomData.creator === userId || !roomData.creator) {
+        setIsCreator(true);
       }
 
       // Add user to room
-      mockDb[roomId].users[userId] = { 
-        userName: userName.trim(), 
-        speed: 0, 
+      await set(ref(db, `rooms/${roomId}/users/${userId}`), {
+        userName: userName.trim(),
+        speed: 0,
         accuracy: 100,
-        finished: false 
-      };
+        finished: false,
+        joinedAt: serverTimestamp()
+      });
 
+      console.log("Successfully joined room:", roomId);
       setJoined(true);
-      updateUsers();
-    } catch (error) {
-      alert("Error joining room. Please check the room ID.");
-    }
-  };
-
-  const updateUsers = () => {
-    if (mockDb[roomId] && mockDb[roomId].users) {
-      const userList = Object.entries(mockDb[roomId].users).map(([id, user]) => ({
-        id,
-        ...user,
-      }));
-      setUsers(userList);
+      setRoomExists(true);
       
-      const roomData = mockDb[roomId];
-      setGameStarted(roomData.gameStarted || false);
-      
-      // Sync game text for all users
-      if (roomData.gameText && roomData.gameText !== currentText) {
+      // Set current game state if game is already started
+      if (roomData.gameStarted && roomData.gameText) {
+        setGameStarted(true);
         setCurrentText(roomData.gameText);
       }
+      
+    } catch (error) {
+      console.error("Error joining room:", error);
+      setJoinError("Error joining room. Please try again.");
+    } finally {
+      setIsJoining(false);
     }
   };
 
-  const startGame = () => {
+  const startGame = async () => {
+    if (!isCreator) return;
+    
     const randomText = generateRandomText();
     setCurrentText(randomText);
     
-    if (mockDb[roomId]) {
-      mockDb[roomId].gameStarted = true;
-      mockDb[roomId].gameText = randomText;
+    try {
+      // Update room with game data
+      await set(ref(db, `rooms/${roomId}/gameStarted`), true);
+      await set(ref(db, `rooms/${roomId}/gameText`), randomText);
+      
       // Reset all users for new game
-      Object.keys(mockDb[roomId].users).forEach(uid => {
-        mockDb[roomId].users[uid].speed = 0;
-        mockDb[roomId].users[uid].accuracy = 100;
-        mockDb[roomId].users[uid].finished = false;
+      const usersRef = ref(db, `rooms/${roomId}/users`);
+      const snapshot = await new Promise((resolve) => {
+        onValue(usersRef, resolve, { onlyOnce: true });
       });
+      
+      if (snapshot.exists()) {
+        const usersData = snapshot.val();
+        const resetPromises = Object.keys(usersData).map(async (uid) => {
+          await set(ref(db, `rooms/${roomId}/users/${uid}/speed`), 0);
+          await set(ref(db, `rooms/${roomId}/users/${uid}/accuracy`), 100);
+          await set(ref(db, `rooms/${roomId}/users/${uid}/finished`), false);
+        });
+        
+        await Promise.all(resetPromises);
+      }
+      
       setGameStarted(true);
       setStartTime(null);
       setTypedText("");
       setIsTyping(false);
       setShowLeaderboard(false);
-      updateUsers();
+    } catch (error) {
+      console.error("Error starting game:", error);
+      alert("Error starting game. Please try again.");
     }
   };
 
-  const handleTyping = (e) => {
+  const handleTyping = async (e) => {
     const value = e.target.value;
     setTypedText(value);
 
@@ -146,11 +194,12 @@ function InviteFriends({ theme = "light" }) {
 
       setSpeed(currentSpeed);
 
-      // Update user data
-      if (mockDb[roomId] && mockDb[roomId].users[userId]) {
-        mockDb[roomId].users[userId].speed = currentSpeed;
-        mockDb[roomId].users[userId].accuracy = accuracy;
-        updateUsers();
+      // Update user data in Firebase
+      try {
+        await set(ref(db, `rooms/${roomId}/users/${userId}/speed`), currentSpeed);
+        await set(ref(db, `rooms/${roomId}/users/${userId}/accuracy`), accuracy);
+      } catch (error) {
+        console.error("Error updating user data:", error);
       }
     }
 
@@ -160,18 +209,11 @@ function InviteFriends({ theme = "light" }) {
     }
   };
 
-  const finishTyping = () => {
-    if (mockDb[roomId] && mockDb[roomId].users[userId]) {
-      mockDb[roomId].users[userId].finished = true;
-      updateUsers();
-      
-      // Check if all users finished
-      const allUsers = Object.values(mockDb[roomId].users);
-      const finishedUsers = allUsers.filter(user => user.finished);
-      
-      if (finishedUsers.length === allUsers.length) {
-        setShowLeaderboard(true);
-      }
+  const finishTyping = async () => {
+    try {
+      await set(ref(db, `rooms/${roomId}/users/${userId}/finished`), true);
+    } catch (error) {
+      console.error("Error finishing typing:", error);
     }
   };
 
@@ -179,13 +221,65 @@ function InviteFriends({ theme = "light" }) {
     setShowLeaderboard(true);
   };
 
-  // Simulate real-time updates
+  // Listen to room changes in real-time
   useEffect(() => {
     if (!roomId || !joined) return;
 
-    const interval = setInterval(updateUsers, 1000);
-    return () => clearInterval(interval);
-  }, [roomId, joined]);
+    const roomRef = ref(db, `rooms/${roomId}`);
+    
+    const unsubscribe = onValue(roomRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const roomData = snapshot.val();
+        
+        // Update users list
+        if (roomData.users) {
+          const userList = Object.entries(roomData.users).map(([id, user]) => ({
+            id,
+            ...user,
+          }));
+          setUsers(userList);
+          
+          // Check if all users finished
+          const finishedUsers = userList.filter(user => user.finished);
+          if (finishedUsers.length === userList.length && userList.length > 0 && gameStarted) {
+            setShowLeaderboard(true);
+          }
+        }
+        
+        // Update game state
+        setGameStarted(roomData.gameStarted || false);
+        
+        // Update game text if it changed
+        if (roomData.gameText && roomData.gameText !== currentText) {
+          setCurrentText(roomData.gameText);
+          // Reset user's typing state when new game starts
+          if (typedText !== "") {
+            setTypedText("");
+            setStartTime(null);
+            setIsTyping(false);
+          }
+        }
+        
+        // Set creator status
+        if (roomData.creator === userId) {
+          setIsCreator(true);
+        }
+      } else {
+        // Room was deleted
+        setRoomExists(false);
+        setJoinError("Room no longer exists.");
+      }
+    });
+
+    return () => off(roomRef, 'value', unsubscribe);
+  }, [roomId, joined, currentText, userId, gameStarted, typedText]);
+
+  // Auto-join if roomId is in URL and username is provided
+  useEffect(() => {
+    if (urlRoomId && !joined && userName.trim() && !isJoining) {
+      handleJoin();
+    }
+  }, [urlRoomId, userName, joined, isJoining]);
 
   return (
     <div
@@ -200,6 +294,12 @@ function InviteFriends({ theme = "light" }) {
           }`}
         >
           <h1 className="text-2xl font-bold text-center mb-6">Typing Speed Challenge</h1>
+          
+          {joinError && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {joinError}
+            </div>
+          )}
           
           {!roomId && (
             <button
@@ -216,19 +316,26 @@ function InviteFriends({ theme = "light" }) {
               value={roomId}
               onChange={(e) => setRoomId(e.target.value.toLowerCase())}
               className="w-full p-3 border-2 rounded-lg text-black focus:border-blue-500 focus:outline-none"
+              disabled={isJoining}
             />
             <input
               placeholder="Enter Your Name"
               value={userName}
               onChange={(e) => setUserName(e.target.value)}
               className="w-full p-3 border-2 rounded-lg text-black focus:border-blue-500 focus:outline-none"
-              onKeyPress={(e) => e.key === 'Enter' && handleJoin()}
+              onKeyPress={(e) => e.key === 'Enter' && !isJoining && handleJoin()}
+              disabled={isJoining}
             />
             <button
-              className="bg-blue-600 hover:bg-blue-700 text-white w-full py-3 rounded-lg font-semibold transition-colors"
+              className={`w-full py-3 rounded-lg font-semibold transition-colors ${
+                isJoining 
+                  ? "bg-gray-400 text-white cursor-not-allowed" 
+                  : "bg-blue-600 hover:bg-blue-700 text-white"
+              }`}
               onClick={handleJoin}
+              disabled={isJoining}
             >
-              Join Room
+              {isJoining ? "Joining..." : "Join Room"}
             </button>
           </div>
 
@@ -251,10 +358,10 @@ function InviteFriends({ theme = "light" }) {
               <p className="text-sm font-medium mb-2">Or share this link:</p>
               <div className="flex items-center justify-between bg-gray-200 dark:bg-gray-600 rounded-lg p-2">
                 <code className="text-black dark:text-white text-xs break-all mr-2">
-                  https://varnavelocity.vercel.app/collaborations/{roomId}
+                  {window.location.origin}/collaborations/{roomId}
                 </code>
                 <button
-                  onClick={() => navigator.clipboard.writeText(`https://varnavelocity.vercel.app/collaborations/${roomId}`)}
+                  onClick={() => navigator.clipboard.writeText(`${window.location.origin}/collaborations/${roomId}`)}
                   className="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded transition-colors whitespace-nowrap"
                   title="Copy Link"
                 >
@@ -282,7 +389,10 @@ function InviteFriends({ theme = "light" }) {
                   user.finished ? "border-green-500" : "border-transparent"
                 } ${theme === "dark" ? "bg-gray-800" : "bg-white"}`}
               >
-                <p className="font-bold text-lg">{user.userName}</p>
+                <p className="font-bold text-lg">
+                  {user.userName}
+                  {user.id === userId && <span className="text-blue-500 ml-1">(You)</span>}
+                </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   Speed: <span className="font-semibold text-blue-600">{user.speed || 0}</span> WPM
                 </p>
@@ -316,7 +426,10 @@ function InviteFriends({ theme = "light" }) {
           {!gameStarted && !isCreator && users.length > 0 && (
             <div className="text-center">
               <p className="text-gray-600 dark:text-gray-400">
-                Waiting for <strong>{users.find(u => u.id !== userId)?.userName || "room creator"}</strong> to start the game...
+                Waiting for the room creator to start the game...
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                ({users.length} player{users.length !== 1 ? 's' : ''} in room)
               </p>
             </div>
           )}
@@ -375,12 +488,14 @@ function InviteFriends({ theme = "light" }) {
                     </span>
                   </div>
                   
-                  <button
-                    onClick={endGame}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
-                  >
-                    End Game Early
-                  </button>
+                  {isCreator && (
+                    <button
+                      onClick={endGame}
+                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+                    >
+                      End Game Early
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -411,7 +526,10 @@ function InviteFriends({ theme = "light" }) {
                             {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}.`}
                           </span>
                           <div>
-                            <span className="font-bold text-lg">{user.userName}</span>
+                            <span className="font-bold text-lg">
+                              {user.userName}
+                              {user.id === userId && <span className="text-blue-500 ml-1">(You)</span>}
+                            </span>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
                               Accuracy: {user.accuracy || 100}%
                             </p>
@@ -421,6 +539,17 @@ function InviteFriends({ theme = "light" }) {
                       </div>
                     ))}
                 </div>
+                
+                {isCreator && (
+                  <div className="text-center mt-6">
+                    <button
+                      onClick={startGame}
+                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold text-lg transition-colors"
+                    >
+                      Start New Game
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -16,18 +16,19 @@ const App = () => {
   return (
     <div className={theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}>
       <Navbar theme={theme} setTheme={setTheme} />
-
+      
       <div className="min-h-[70vh]">
         <Routes>
-          <Route path="/" element={<Home />} theme={theme} />
-          <Route path="/learning" element={<Learning />} theme={theme} />
-          <Route path="/pricing" element={<Pricing />} theme={theme} />
+          <Route path="/" element={<Home theme={theme} />} />
+          <Route path="/learning" element={<Learning theme={theme} />} />
+          <Route path="/pricing" element={<Pricing theme={theme} />} />
           <Route path="/typingtest" element={<SoloPractice theme={theme} />} />
-          <Route path="/colloborations" element={<InviteFriends/>}theme={theme} />
+          {/* Fixed the typo: colloborations -> collaborations */}
+          <Route path="/collaborations" element={<InviteFriends theme={theme} />} />
           <Route path="/collaborations/:roomId" element={<InviteFriends theme={theme} />} />
         </Routes>
       </div>
-
+      
       <Footer />
     </div>
   );

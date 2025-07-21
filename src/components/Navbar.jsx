@@ -92,7 +92,7 @@ const Navbar = ({ theme, setTheme }) => {
           <NavLink to="/pricing" className={navLinkStyle}>
             Pricing
           </NavLink>
-          <NavLink to="/colloborations" className={navLinkStyle}>
+          <NavLink to="/collaborations" className={navLinkStyle}>
             Invite Friends
           </NavLink>
         </nav>
