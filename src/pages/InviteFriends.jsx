@@ -5,7 +5,7 @@ import { ref, set, onValue, push, serverTimestamp, off } from "firebase/database
 
 function InviteFriends({ theme = "light" }) {
   const { roomId: urlRoomId } = useParams(); // Get roomId from URL if available
-  
+
   const [roomId, setRoomId] = useState(urlRoomId || "");
   const [userName, setUserName] = useState("");
   const [joined, setJoined] = useState(false);
@@ -22,7 +22,7 @@ function InviteFriends({ theme = "light" }) {
   const [roomExists, setRoomExists] = useState(true);
   const [joinError, setJoinError] = useState("");
   const [isJoining, setIsJoining] = useState(false);
-  
+
   // Random words for typing test
   const wordBank = [
     "ability", "about", "above", "accept", "according", "account", "across", "action", "activity", "actually",
@@ -49,7 +49,7 @@ function InviteFriends({ theme = "light" }) {
     const id = Math.random().toString(36).substring(2, 8).toLowerCase();
     setRoomId(id);
     setIsCreator(true);
-    
+
     try {
       // Create room in Firebase with creator info
       await set(ref(db, `rooms/${id}`), {
@@ -59,7 +59,7 @@ function InviteFriends({ theme = "light" }) {
         createdAt: serverTimestamp(),
         users: {}
       });
-      
+
       console.log("Room created successfully:", id);
     } catch (error) {
       console.error("Error creating room:", error);
@@ -82,7 +82,7 @@ function InviteFriends({ theme = "light" }) {
 
     try {
       const roomRef = ref(db, `rooms/${roomId}`);
-      
+
       // Check if room exists first
       const roomSnapshot = await new Promise((resolve) => {
         onValue(roomRef, resolve, { onlyOnce: true });
@@ -96,7 +96,7 @@ function InviteFriends({ theme = "light" }) {
       }
 
       const roomData = roomSnapshot.val();
-      
+
       // Check if user is the creator
       if (roomData.creator === userId || !roomData.creator) {
         setIsCreator(true);
@@ -114,13 +114,13 @@ function InviteFriends({ theme = "light" }) {
       console.log("Successfully joined room:", roomId);
       setJoined(true);
       setRoomExists(true);
-      
+
       // Set current game state if game is already started
       if (roomData.gameStarted && roomData.gameText) {
         setGameStarted(true);
         setCurrentText(roomData.gameText);
       }
-      
+
     } catch (error) {
       console.error("Error joining room:", error);
       setJoinError("Error joining room. Please try again.");
@@ -131,21 +131,21 @@ function InviteFriends({ theme = "light" }) {
 
   const startGame = async () => {
     if (!isCreator) return;
-    
+
     const randomText = generateRandomText();
     setCurrentText(randomText);
-    
+
     try {
       // Update room with game data
       await set(ref(db, `rooms/${roomId}/gameStarted`), true);
       await set(ref(db, `rooms/${roomId}/gameText`), randomText);
-      
+
       // Reset all users for new game
       const usersRef = ref(db, `rooms/${roomId}/users`);
       const snapshot = await new Promise((resolve) => {
         onValue(usersRef, resolve, { onlyOnce: true });
       });
-      
+
       if (snapshot.exists()) {
         const usersData = snapshot.val();
         const resetPromises = Object.keys(usersData).map(async (uid) => {
@@ -153,10 +153,10 @@ function InviteFriends({ theme = "light" }) {
           await set(ref(db, `rooms/${roomId}/users/${uid}/accuracy`), 100);
           await set(ref(db, `rooms/${roomId}/users/${uid}/finished`), false);
         });
-        
+
         await Promise.all(resetPromises);
       }
-      
+
       setGameStarted(true);
       setStartTime(null);
       setTypedText("");
@@ -182,7 +182,7 @@ function InviteFriends({ theme = "light" }) {
       const timeElapsed = (currentTime - startTime) / 1000 / 60; // minutes
       const wordsTyped = value.trim().split(' ').length;
       const currentSpeed = Math.round(wordsTyped / timeElapsed) || 0;
-      
+
       // Calculate accuracy
       let correctChars = 0;
       for (let i = 0; i < Math.min(value.length, currentText.length); i++) {
@@ -226,11 +226,11 @@ function InviteFriends({ theme = "light" }) {
     if (!roomId || !joined) return;
 
     const roomRef = ref(db, `rooms/${roomId}`);
-    
+
     const unsubscribe = onValue(roomRef, (snapshot) => {
       if (snapshot.exists()) {
         const roomData = snapshot.val();
-        
+
         // Update users list
         if (roomData.users) {
           const userList = Object.entries(roomData.users).map(([id, user]) => ({
@@ -238,17 +238,17 @@ function InviteFriends({ theme = "light" }) {
             ...user,
           }));
           setUsers(userList);
-          
+
           // Check if all users finished
           const finishedUsers = userList.filter(user => user.finished);
           if (finishedUsers.length === userList.length && userList.length > 0 && gameStarted) {
             setShowLeaderboard(true);
           }
         }
-        
+
         // Update game state
         setGameStarted(roomData.gameStarted || false);
-        
+
         // Update game text if it changed
         if (roomData.gameText && roomData.gameText !== currentText) {
           setCurrentText(roomData.gameText);
@@ -259,7 +259,7 @@ function InviteFriends({ theme = "light" }) {
             setIsTyping(false);
           }
         }
-        
+
         // Set creator status
         if (roomData.creator === userId) {
           setIsCreator(true);
@@ -283,55 +283,60 @@ function InviteFriends({ theme = "light" }) {
 
   return (
     <div
-      className={`min-h-screen p-8 ${
-        theme === "dark" ? "bg-gray-900 text-white" : "bg-gray-100 text-black"
-      }`}
+      className={`min-h-screen p-8 ${theme === "dark" ? "bg-gray-900 text-white" : "bg-gray-100 text-black"
+        }`}
     >
+
+      <p className="text-center text-gray-400 md:text-lg mt-2  mb-8">
+        Challenge your friends in a real-time typing speed battle and boost your skills in a fun way!
+      </p>
+
       {!joined ? (
+        // rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 p-6 flex flex-col justify-between
         <div
-          className={`max-w-md mx-auto p-6 shadow-lg rounded-lg ${
-            theme === "dark" ? "bg-gray-800" : "bg-white"
-          }`}
+          className={`max-w-md mx-auto p-6 border-gray-100 shadow-lg rounded-2xl ${theme === "dark" ? "bg-gray-200" : "bg-gray-200"
+            }`}
         >
-          <h1 className="text-2xl font-bold text-center mb-6">Typing Speed Challenge</h1>
-          
+          <h1 className="text-2xl font-bold text-gray-500 text-center mb-6">Typing Speed Challenge</h1>
+
           {joinError && (
             <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
               {joinError}
             </div>
           )}
-          
+
           {!roomId && (
+
             <button
               onClick={createRoom}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white w-full py-3 rounded-lg mb-4 font-semibold transition-colors"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white w-full py-3 rounded-lg mb-4 font-semibold transform hover:-translate-y-1 transition duration-400"
             >
               Create New Game Room
             </button>
           )}
-          
+
           <div className="space-y-3">
             <input
               placeholder="Enter Room ID"
               value={roomId}
               onChange={(e) => setRoomId(e.target.value.toLowerCase())}
-              className="w-full p-3 border-2 rounded-lg text-black focus:border-blue-500 focus:outline-none"
+              className="w-full p-3 border-2 rounded-lg text-gray-400 focus:border-blue-500 focus:outline-none"
               disabled={isJoining}
             />
             <input
               placeholder="Enter Your Name"
               value={userName}
               onChange={(e) => setUserName(e.target.value)}
-              className="w-full p-3 border-2 rounded-lg text-black focus:border-blue-500 focus:outline-none"
+              className="w-full p-3 border-2 rounded-lg text-gray-400 focus:border-blue-500 focus:outline-none"
               onKeyPress={(e) => e.key === 'Enter' && !isJoining && handleJoin()}
               disabled={isJoining}
             />
+
             <button
-              className={`w-full py-3 rounded-lg font-semibold transition-colors ${
-                isJoining 
-                  ? "bg-gray-400 text-white cursor-not-allowed" 
-                  : "bg-blue-600 hover:bg-blue-700 text-white"
-              }`}
+              className={`w-full py-3 rounded-lg font-semibold transition-colors ${isJoining
+                ? "bg-gray-400 text-white cursor-not-allowed"
+                : "px-6 py-2 bg-black text-white rounded-lg font-bold transform hover:-translate-y-1 transition duration-400"
+                }`}
               onClick={handleJoin}
               disabled={isJoining}
             >
@@ -341,9 +346,9 @@ function InviteFriends({ theme = "light" }) {
 
           {roomId && (
             <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
-              <p className="text-sm font-medium mb-2">Share this Room ID:</p>
+              <p className="text-sm font-medium text-gray-400 mb-2">Share this Room ID:</p>
               <div className="flex items-center justify-between bg-gray-200 dark:bg-gray-600 rounded-lg p-2 mb-3">
-                <code className="text-black dark:text-white font-bold text-lg">
+                <code className="text-gray-400 dark:text-white font-bold text-lg">
                   {roomId}
                 </code>
                 <button
@@ -354,10 +359,10 @@ function InviteFriends({ theme = "light" }) {
                   Copy
                 </button>
               </div>
-              
-              <p className="text-sm font-medium mb-2">Or share this link:</p>
+
+              <p className="text-sm text-gray-400 font-medium mb-2">Or share this link:</p>
               <div className="flex items-center justify-between bg-gray-200 dark:bg-gray-600 rounded-lg p-2">
-                <code className="text-black dark:text-white text-xs break-all mr-2">
+                <code className="text-gray-400 dark:text-white text-xs break-all mr-2">
                   {window.location.origin}/collaborations/{roomId}
                 </code>
                 <button
@@ -374,39 +379,41 @@ function InviteFriends({ theme = "light" }) {
       ) : (
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold">Room: {roomId}</h2>
+            <h2 className="text-2xl text-gray-400 font-bold">Room: {roomId}</h2>
             <p className="text-gray-600 dark:text-gray-400">
               {gameStarted ? (showLeaderboard ? "Game Complete!" : "Game in Progress") : "Waiting to start..."}
             </p>
           </div>
 
           {/* Users Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
             {users.map((user) => (
               <div
                 key={user.id}
-                className={`p-4 rounded-lg shadow-md text-center border-2 ${
-                  user.finished ? "border-green-500" : "border-transparent"
-                } ${theme === "dark" ? "bg-gray-800" : "bg-white"}`}
+                className={`rounded-2xl border bg-gray-200 p-6 bg-gradient-to-br from-white to-gray-50 shadow-md transition hover:shadow-lg ${user.finished ? "border-green-400" : "border-gray-200"
+                  }`}
               >
-                <p className="font-bold text-lg">
-                  {user.userName}
-                  {user.id === userId && <span className="text-blue-500 ml-1">(You)</span>}
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Speed: <span className="font-semibold text-blue-600">{user.speed || 0}</span> WPM
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Accuracy: <span className="font-semibold text-green-600">{user.accuracy || 100}</span>%
-                </p>
-                {user.finished && (
-                  <span className="inline-block mt-2 px-2 py-1 bg-green-500 text-white text-xs rounded-full">
-                    Finished!
-                  </span>
-                )}
+                <div className="flex flex-col items-center">
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    {user.userName}
+                    {user.id === userId && <span className="text-blue-500 ml-1">(You)</span>}
+                  </h3>
+
+                  <p className="text-sm text-gray-500 mt-2">
+                    Speed:{" "}
+                    <span className="font-semibold text-indigo-600">{user.speed || 0}</span> WPM
+                  </p>
+
+                  {user.finished && (
+                    <div className="mt-3 px-3 py-1 bg-green-500 text-white text-xs rounded-full shadow-sm">
+                      Finished!
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
+
 
           {/* Game Controls */}
           {!gameStarted && isCreator && users.length > 0 && (
@@ -437,16 +444,15 @@ function InviteFriends({ theme = "light" }) {
           {/* Typing Area - Available for ALL players once game starts */}
           {gameStarted && !showLeaderboard && currentText && (
             <div className="mt-8">
-              <div className={`p-6 rounded-lg shadow-lg ${
-                theme === "dark" ? "bg-gray-800" : "bg-white"
-              }`}>
+              <div className={`p-6 rounded-2xl shadow-lg ${theme === "dark" ? "bg-gray-800" : "bg-gray-100"
+                }`}>
                 <div className="text-center mb-4">
                   <h3 className="text-xl font-bold">Type the following words:</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Everyone is typing the same text - let's see who's fastest! 🏃‍♂️💨
                   </p>
                 </div>
-                
+
                 {/* Reference Text */}
                 <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg mb-4 text-lg leading-relaxed font-mono">
                   {currentText.split('').map((char, index) => (
@@ -458,8 +464,8 @@ function InviteFriends({ theme = "light" }) {
                             ? "bg-green-200 dark:bg-green-800 text-green-900 dark:text-green-100"
                             : "bg-red-200 dark:bg-red-800 text-red-900 dark:text-red-100"
                           : index === typedText.length
-                          ? "bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 animate-pulse"
-                          : ""
+                            ? "bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 animate-pulse"
+                            : ""
                       }
                     >
                       {char}
@@ -487,7 +493,7 @@ function InviteFriends({ theme = "light" }) {
                       {Math.round((typedText.length / currentText.length) * 100)}%
                     </span>
                   </div>
-                  
+
                   {isCreator && (
                     <button
                       onClick={endGame}
@@ -504,22 +510,20 @@ function InviteFriends({ theme = "light" }) {
           {/* Leaderboard */}
           {showLeaderboard && (
             <div className="mt-8">
-              <div className={`p-6 rounded-lg shadow-lg ${
-                theme === "dark" ? "bg-gray-800" : "bg-white"
-              }`}>
-                <h3 className="text-2xl font-bold mb-6 text-center">🏆 Final Results</h3>
+              <div className={`p-6 rounded-2xl shadow-lg ${theme === "dark" ? "bg-gray-800" : "bg-gray-100"
+                }`}>
+                <h3 className="text-2xl font-bold text-gray-400 mb-6 text-center">🏆 Final Results</h3>
                 <div className="space-y-3">
                   {[...users]
                     .sort((a, b) => b.speed - a.speed)
                     .map((user, index) => (
                       <div
                         key={user.id}
-                        className={`p-4 rounded-lg shadow flex justify-between items-center ${
-                          index === 0 ? "bg-yellow-100 dark:bg-yellow-900 border-2 border-yellow-500" :
+                        className={`p-4 rounded-lg shadow flex justify-between items-center ${index === 0 ? "bg-yellow-100 dark:bg-yellow-900 border-2 border-yellow-500" :
                           index === 1 ? "bg-gray-100 dark:bg-gray-700" :
-                          index === 2 ? "bg-orange-100 dark:bg-orange-900" :
-                          theme === "dark" ? "bg-gray-700" : "bg-gray-50"
-                        }`}
+                            index === 2 ? "bg-orange-100 dark:bg-orange-900" :
+                              theme === "dark" ? "bg-gray-700" : "bg-gray-50"
+                          }`}
                       >
                         <div className="flex items-center">
                           <span className="text-2xl font-bold mr-3">
@@ -539,15 +543,37 @@ function InviteFriends({ theme = "light" }) {
                       </div>
                     ))}
                 </div>
-                
+
                 {isCreator && (
                   <div className="text-center mt-6">
-                    <button
-                      onClick={startGame}
-                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold text-lg transition-colors"
-                    >
-                      Start New Game
-                    </button>
+                    <div className="flex justify-center items-center min-h-[300px]">
+                      <button
+                        onClick={startGame}
+                        className="bg-gradient-to-r from-green-500 via-emerald-500 to-lime-500 
+                          hover:from-green-600 hover:to-lime-600
+                          text-white px-6 py-3 rounded-xl 
+                          font-semibold text-lg shadow-md 
+                          hover:shadow-lg transform hover:scale-105 
+                          transition-all duration-300 ease-in-out flex items-center gap-2"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"
+                          />
+                        </svg>
+                        Start New Game
+                      </button>
+                    </div>
+
                   </div>
                 )}
               </div>
