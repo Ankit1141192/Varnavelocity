@@ -22,6 +22,13 @@ function InviteFriends({ theme = "light" }) {
   const [roomExists, setRoomExists] = useState(true);
   const [joinError, setJoinError] = useState("");
   const [isJoining, setIsJoining] = useState(false);
+  
+  // New states for enhanced accuracy and time tracking
+  const [totalKeystrokes, setTotalKeystrokes] = useState(0);
+  const [correctKeystrokes, setCorrectKeystrokes] = useState(0);
+  const [errors, setErrors] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [gameEndTime, setGameEndTime] = useState(null);
 
   // Random words for typing test
   const wordBank = [
@@ -43,6 +50,24 @@ function InviteFriends({ theme = "light" }) {
     const numWords = 15 + Math.floor(Math.random() * 10); // 15-25 words
     const shuffled = [...wordBank].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, numWords).join(" ");
+  };
+
+  // Timer effect for elapsed time
+  useEffect(() => {
+    let interval;
+    if (isTyping && startTime && !gameEndTime) {
+      interval = setInterval(() => {
+        setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isTyping, startTime, gameEndTime]);
+
+  // Format time as MM:SS
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   const createRoom = async () => {
@@ -108,6 +133,7 @@ function InviteFriends({ theme = "light" }) {
         speed: 0,
         accuracy: 100,
         finished: false,
+        totalTime: 0,
         joinedAt: serverTimestamp()
       });
 
@@ -152,6 +178,7 @@ function InviteFriends({ theme = "light" }) {
           await set(ref(db, `rooms/${roomId}/users/${uid}/speed`), 0);
           await set(ref(db, `rooms/${roomId}/users/${uid}/accuracy`), 100);
           await set(ref(db, `rooms/${roomId}/users/${uid}/finished`), false);
+          await set(ref(db, `rooms/${roomId}/users/${uid}/totalTime`), 0);
         });
 
         await Promise.all(resetPromises);
@@ -162,6 +189,12 @@ function InviteFriends({ theme = "light" }) {
       setTypedText("");
       setIsTyping(false);
       setShowLeaderboard(false);
+      setElapsedTime(0);
+      setGameEndTime(null);
+      // Reset accuracy tracking
+      setTotalKeystrokes(0);
+      setCorrectKeystrokes(0);
+      setErrors(0);
     } catch (error) {
       console.error("Error starting game:", error);
       alert("Error starting game. Please try again.");
@@ -170,6 +203,9 @@ function InviteFriends({ theme = "light" }) {
 
   const handleTyping = async (e) => {
     const value = e.target.value;
+    const previousLength = typedText.length;
+    const currentLength = value.length;
+    
     setTypedText(value);
 
     if (!isTyping && value.length > 0) {
@@ -177,20 +213,45 @@ function InviteFriends({ theme = "light" }) {
       setStartTime(Date.now());
     }
 
+    // Track keystrokes and accuracy
+    if (currentLength > previousLength) {
+      // User typed a character
+      const newChar = value[currentLength - 1];
+      const expectedChar = currentText[currentLength - 1];
+      
+      setTotalKeystrokes(prev => prev + 1);
+      
+      if (newChar === expectedChar) {
+        setCorrectKeystrokes(prev => prev + 1);
+      } else {
+        setErrors(prev => prev + 1);
+      }
+    }
+
     if (isTyping && startTime) {
       const currentTime = Date.now();
       const timeElapsed = (currentTime - startTime) / 1000 / 60; // minutes
-      const wordsTyped = value.trim().split(' ').length;
+      const wordsTyped = value.trim().split(' ').filter(word => word).length;
       const currentSpeed = Math.round(wordsTyped / timeElapsed) || 0;
 
-      // Calculate accuracy
-      let correctChars = 0;
-      for (let i = 0; i < Math.min(value.length, currentText.length); i++) {
-        if (value[i] === currentText[i]) {
-          correctChars++;
+      // Enhanced accuracy calculation
+      let accuracy = 100;
+      if (totalKeystrokes > 0) {
+        // Calculate accuracy based on total keystrokes vs correct keystrokes
+        accuracy = Math.round((correctKeystrokes / totalKeystrokes) * 100);
+        
+        // Alternative: You can also penalize for current wrong characters
+        let currentCorrectChars = 0;
+        for (let i = 0; i < Math.min(value.length, currentText.length); i++) {
+          if (value[i] === currentText[i]) {
+            currentCorrectChars++;
+          }
         }
+        
+        // Use the minimum of keystroke-based accuracy and current position accuracy
+        const positionAccuracy = value.length > 0 ? Math.round((currentCorrectChars / value.length) * 100) : 100;
+        accuracy = Math.min(accuracy, positionAccuracy);
       }
-      const accuracy = value.length > 0 ? Math.round((correctChars / value.length) * 100) : 100;
 
       setSpeed(currentSpeed);
 
@@ -198,6 +259,7 @@ function InviteFriends({ theme = "light" }) {
       try {
         await set(ref(db, `rooms/${roomId}/users/${userId}/speed`), currentSpeed);
         await set(ref(db, `rooms/${roomId}/users/${userId}/accuracy`), accuracy);
+        await set(ref(db, `rooms/${roomId}/users/${userId}/totalTime`), Math.floor((currentTime - startTime) / 1000));
       } catch (error) {
         console.error("Error updating user data:", error);
       }
@@ -210,8 +272,13 @@ function InviteFriends({ theme = "light" }) {
   };
 
   const finishTyping = async () => {
+    const endTime = Date.now();
+    setGameEndTime(endTime);
+    
     try {
+      const totalTime = startTime ? Math.floor((endTime - startTime) / 1000) : 0;
       await set(ref(db, `rooms/${roomId}/users/${userId}/finished`), true);
+      await set(ref(db, `rooms/${roomId}/users/${userId}/totalTime`), totalTime);
     } catch (error) {
       console.error("Error finishing typing:", error);
     }
@@ -257,6 +324,11 @@ function InviteFriends({ theme = "light" }) {
             setTypedText("");
             setStartTime(null);
             setIsTyping(false);
+            setElapsedTime(0);
+            setGameEndTime(null);
+            setTotalKeystrokes(0);
+            setCorrectKeystrokes(0);
+            setErrors(0);
           }
         }
 
@@ -383,6 +455,12 @@ function InviteFriends({ theme = "light" }) {
             <p className="text-gray-600 dark:text-gray-400">
               {gameStarted ? (showLeaderboard ? "Game Complete!" : "Game in Progress") : "Waiting to start..."}
             </p>
+            {/* Show elapsed time during game */}
+            {gameStarted && !showLeaderboard && isTyping && (
+              <div className="mt-2 text-lg font-semibold text-blue-600">
+                Time: {formatTime(elapsedTime)}
+              </div>
+            )}
           </div>
 
           {/* Users Grid */}
@@ -403,6 +481,18 @@ function InviteFriends({ theme = "light" }) {
                     Speed:{" "}
                     <span className="font-semibold text-indigo-600">{user.speed || 0}</span> WPM
                   </p>
+                  
+                  <p className="text-sm text-gray-500">
+                    Accuracy:{" "}
+                    <span className="font-semibold text-green-600">{user.accuracy || 100}%</span>
+                  </p>
+                  
+                  {user.totalTime > 0 && (
+                    <p className="text-sm text-gray-500">
+                      Time:{" "}
+                      <span className="font-semibold text-blue-600">{formatTime(user.totalTime)}</span>
+                    </p>
+                  )}
 
                   {user.finished && (
                     <div className="mt-3 px-3 py-1 bg-green-500 text-white text-xs rounded-full shadow-sm">
@@ -484,14 +574,30 @@ function InviteFriends({ theme = "light" }) {
                   autoFocus
                 />
 
-                <div className="flex justify-between items-center mt-4">
-                  <div className="text-lg">
-                    <span className="font-semibold">Your Speed: </span>
-                    <span className="text-blue-600 font-bold">{speed} WPM</span>
-                    <span className="ml-4 font-semibold">Progress: </span>
-                    <span className="text-green-600 font-bold">
-                      {Math.round((typedText.length / currentText.length) * 100)}%
-                    </span>
+                <div className="flex flex-wrap justify-between items-center mt-4 gap-4">
+                  <div className="flex flex-wrap gap-4 text-lg">
+                    <div>
+                      <span className="font-semibold">Speed: </span>
+                      <span className="text-blue-600 font-bold">{speed} WPM</span>
+                    </div>
+                    <div>
+                      <span className="font-semibold">Accuracy: </span>
+                      <span className="text-green-600 font-bold">
+                        {totalKeystrokes > 0 ? Math.round((correctKeystrokes / totalKeystrokes) * 100) : 100}%
+                      </span>
+                    </div>
+                    <div>
+                      <span className="font-semibold">Progress: </span>
+                      <span className="text-purple-600 font-bold">
+                        {Math.round((typedText.length / currentText.length) * 100)}%
+                      </span>
+                    </div>
+                    {isTyping && (
+                      <div>
+                        <span className="font-semibold">Time: </span>
+                        <span className="text-orange-600 font-bold">{formatTime(elapsedTime)}</span>
+                      </div>
+                    )}
                   </div>
 
                   {isCreator && (
@@ -503,6 +609,15 @@ function InviteFriends({ theme = "light" }) {
                     </button>
                   )}
                 </div>
+                
+                {/* Additional stats */}
+                {totalKeystrokes > 0 && (
+                  <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 flex flex-wrap gap-4">
+                    <span>Total Keystrokes: {totalKeystrokes}</span>
+                    <span>Correct: {correctKeystrokes}</span>
+                    <span>Errors: {errors}</span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -515,7 +630,12 @@ function InviteFriends({ theme = "light" }) {
                 <h3 className="text-2xl font-bold text-gray-400 mb-6 text-center">🏆 Final Results</h3>
                 <div className="space-y-3">
                   {[...users]
-                    .sort((a, b) => b.speed - a.speed)
+                    .sort((a, b) => {
+                      // Sort by speed first, then by accuracy, then by time (lower is better)
+                      if (b.speed !== a.speed) return b.speed - a.speed;
+                      if (b.accuracy !== a.accuracy) return b.accuracy - a.accuracy;
+                      return (a.totalTime || 0) - (b.totalTime || 0);
+                    })
                     .map((user, index) => (
                       <div
                         key={user.id}
@@ -534,9 +654,12 @@ function InviteFriends({ theme = "light" }) {
                               {user.userName}
                               {user.id === userId && <span className="text-blue-500 ml-1">(You)</span>}
                             </span>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              Accuracy: {user.accuracy || 100}%
-                            </p>
+                            <div className="text-sm text-gray-600 dark:text-gray-400 flex gap-4">
+                              <span>Accuracy: {user.accuracy || 100}%</span>
+                              {user.totalTime > 0 && (
+                                <span>Time: {formatTime(user.totalTime)}</span>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <span className="text-xl font-bold text-blue-600">{user.speed} WPM</span>
