@@ -1,11 +1,12 @@
-
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Testimonials from '../pages/Testimonials';
 import Certificate from '../assets/Certificate.png';
 
 function Home() {
   const [typingSpeed, setTypingSpeed] = useState(20);
   const [userName, setUserName] = useState('');
+  const navigate = useNavigate();
 
   const improveTyping = () => {
     setTypingSpeed(prev => (prev < 100 ? prev + 10 : 100));
@@ -15,10 +16,14 @@ function Home() {
     window.print();
   };
 
-
+  const goToSoloPractice = () => {
+    navigate('/typingtest');
+  };
+  const goToInviteFriends = () => {
+    navigate('/collaborations'); 
+  }
 
   return (
-
     <div>
       {/* Top Banner */}
       <div className="flex items-center justify-center p-5">
@@ -34,7 +39,6 @@ function Home() {
           </div>
         </div>
 
-      
       </div>
 
       <div className="w-full text-center py-5 bg-gradient-to-r from-purple-600 to-indigo-600 m-10 mb-10 mt-0">
@@ -43,7 +47,6 @@ function Home() {
           <span className="text-yellow-300">Become a typing pro!</span>
         </h2>
       </div>
-      {/* Typing Progress & Certificate */}
 
       <div className="flex flex-col items-center justify-center px-6 -mt-6 mb-8">
         <div className="w-[90%] max-w-4xl">
@@ -56,8 +59,6 @@ function Home() {
             </button>
 
             <p className="text-sm text-gray-700">Typing Progress: {typingSpeed}%</p>
-
-
 
             <input
               type="text"
@@ -73,15 +74,12 @@ function Home() {
               className="h-full bg-blue-500 transition-all duration-500"
               style={{ width: `${typingSpeed}%` }}
             ></div>
-
-
             <div className="w-full text-center px-4 py-6 bg-gradient-to-r from-purple-600 to-indigo-600">
               <h2 className="text-white text-2xl md:text-3xl font-semibold tracking-wide">
                 Track your progress. Earn your certificate. <br className="hidden sm:block" />
                 <span className="text-yellow-300">Become a typing pro!</span>
               </h2>
             </div>
-
           </div>
 
           {/* Certificate Preview */}
@@ -94,7 +92,6 @@ function Home() {
             />
             <div className="absolute top-[44%] left-[44%] transform -translate-x-1/2 -translate-y-1/2 text-center m-10">
               <p className="text-xl font-semibold text-black">{userName}</p>
-              {/* <p className="text-sm text-gray-800 mt-1">Typing Speed: {typingSpeed}%</p> */}
             </div>
           </div>
         </div>
@@ -113,7 +110,7 @@ function Home() {
               </div>
             </div>
             <button
-              onClick={improveTyping}
+              onClick={goToSoloPractice}
               className="mt-6 bg-blue-600 text-white font-semibold py-2 rounded-md hover:bg-blue-700 transition"
             >
               Practice Yourself
@@ -129,7 +126,9 @@ function Home() {
                 <span>🔄</span>
               </div>
             </div>
-            <button className="mt-6 bg-orange-500 text-white font-semibold py-2 rounded-md hover:bg-orange-600 transition">
+            <button
+              onClick={goToInviteFriends}
+              className="mt-6 bg-orange-500 text-white font-semibold py-2 rounded-md hover:bg-orange-600 transition">
               Create Typing Test
             </button>
           </div>
@@ -169,7 +168,6 @@ function Home() {
       {/* Testimonials */}
       <section className="bg-gray-50 py-16 px-4">
         <div className="max-w-5xl mx-auto">
-
           <Testimonials />
         </div>
       </section>
