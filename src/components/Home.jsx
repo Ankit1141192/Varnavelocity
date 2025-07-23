@@ -96,7 +96,82 @@ function Home() {
           </div>
         </div>
       </div>
-
+      <div className="max-w-6xl mx-auto px-4 py-16">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">Why Choose Varnaveloicty?</h2>
+                <p className="text-gray-600 text-lg">Everything you need to become a typing expert</p>
+              </div>
+      
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+                <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i className="ri-time-line text-2xl text-blue-600"></i>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">Real-Time Tracking</h3>
+                  <p className="text-gray-600">Get instant feedback on your typing speed, accuracy, and improvement over time.</p>
+                </div>
+                
+                <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i className="ri-settings-line text-2xl text-green-600"></i>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">Customizable Practice</h3>
+                  <p className="text-gray-600">Choose your practice duration, difficulty level, and focus areas to match your goals.</p>
+                </div>
+                
+                <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i className="ri-bar-chart-line text-2xl text-purple-600"></i>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">Performance Analytics</h3>
+                  <p className="text-gray-600">Track your progress with detailed statistics and compare with previous attempts.</p>
+                </div>
+              </div>
+      
+              <div className="bg-white rounded-lg shadow-lg p-8 mb-16">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-4">Structured Learning Path</h3>
+                    <p className="text-gray-600 mb-6">
+                      Follow our comprehensive curriculum designed by typing experts. Start with basic finger positioning and progress to advanced techniques.
+                    </p>
+                    <ul className="space-y-2 text-gray-600">
+                      <li className="flex items-center">
+                        <i className="ri-check-line text-green-600 mr-2"></i>
+                        Home row fundamentals
+                      </li>
+                      <li className="flex items-center">
+                        <i className="ri-check-line text-green-600 mr-2"></i>
+                        All keyboard rows mastery
+                      </li>
+                      <li className="flex items-center">
+                        <i className="ri-check-line text-green-600 mr-2"></i>
+                        Numbers and symbols
+                      </li>
+                      <li className="flex items-center">
+                        <i className="ri-check-line text-green-600 mr-2"></i>
+                        Speed building exercises
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="text-center">
+                    <img 
+                      src="https://readdy.ai/api/search-image?query=hands%20typing%20on%20keyboard%20with%20proper%20finger%20positioning%20close%20up%20view%20of%20fingers%20on%20keys%20educational%20typing%20technique%20demonstration%20clean%20modern%20keyboard%20with%20soft%20lighting%20professional%20photography%20style&width=400&height=300&seq=learning-hands&orientation=landscape"
+                      alt="Typing technique demonstration"
+                      className="rounded-lg shadow-md object-cover w-full h-64"
+                    />
+                  </div>
+                </div>
+              </div>
+      
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-8 text-center">
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Ready to Improve Your Typing?</h3>
+                <p className="text-gray-600 mb-6">
+                  Join thousands of users who have already improved their typing skills with TypeMaster.
+                </p>
+                
+              </div>
+            </div>
       {/* Typing Cards */}
       <div className="p-10 flex items-center justify-center bg-gray-100 px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-5xl w-full">

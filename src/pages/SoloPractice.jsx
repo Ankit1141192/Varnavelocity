@@ -1,406 +1,316 @@
-import React, { useState, useEffect, useRef } from "react";
-import { RefreshCw } from "lucide-react";
+// SoloPractice.jsx
+import { useState, useEffect, useRef } from 'react';
+import Button from '../components/ui/Button.jsx';
+
+const sampleTexts = [
+  "The quick brown fox jumps over the lazy dog. This pangram contains every letter of the alphabet at least once.",
+  "In a hole in the ground there lived a hobbit. Not a nasty, dirty, wet hole, filled with the ends of worms and an oozy smell.",
+  "It was the best of times, it was the worst of times, it was the age of wisdom, it was the age of foolishness.",
+  "To be or not to be, that is the question. Whether 'tis nobler in the mind to suffer the slings and arrows of outrageous fortune.",
+  "All happy families are alike; each unhappy family is unhappy in its own way. Everything was in confusion in the Oblonskys' house.",
+  "On 17th April 2023, exactly 12 people attended the conference on 'AI & the Future'. The presentation began at 09:30 AM sharp.",
+  "Typing 5,000 words a day requires discipline, practice, and a structured routine—it's not just about speed, but also about accuracy.",
+  "The spaceship launched at 3:14 PM, traveling at 28,000 km/h, orbiting Earth in precisely 92.5 minutes.",
+  "Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC.",
+  "Debugging is like being the detective in a crime movie where you are also the murderer. Check line 42—it’s usually guilty.",
+  "If a train leaves Station A at 80 km/h and another leaves Station B at 100 km/h, when do they meet? Only math will tell.",
+  "He typed so fast, his keyboard started showing signs of smoke. 120 WPM is not for the faint-hearted.",
+  "The algorithm ran in O(n log n) time, optimizing performance by using a priority queue and a min-heap structure.",
+  "Zebras zigzagged through the zoo zone, zealously zapping zany zombies with zero hesitation."
+];
 
 
-const easyWords = ["cat", "dog", "sun", "fun", "bat", "hat", "run", "big", "red", "car", "book", "tree", "house", "water", "happy", "quick", "jump", "play", "love", "time"];
-const hardWords = ["encyclopedia", "juxtaposition", "phenomenon", "metamorphosis", "extraordinary", "magnificent", "sophisticated", "revolutionary", "philosophical", "psychological"];
-const commonWords = ["the", "and", "for", "are", "but", "not", "you", "all", "can", "her", "was", "one", "our", "had", "by", "word", "oil", "sit", "set", "run", "eat", "far", "sea", "eye", "ask", "own", "age", "ice", "end", "why", "let", "try", "way", "use", "man", "new", "now", "old", "see", "him", "two", "how", "its", "who", "did", "get", "may", "say", "she", "use", "her", "how", "oil", "sit"];
-
-const SoloPractice = ({theme}) => {
-  const [text, setText] = useState("");
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isStarted, setIsStarted] = useState(false);
+export default function SoloPractice() {
+  const [selectedTime, setSelectedTime] = useState(60);
+  const [isActive, setIsActive] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60);
-  const [timeLimit, setTimeLimit] = useState(60);
-  const [wpm, setWpm] = useState(0);
-  const [accuracy, setAccuracy] = useState(100);
-  const [errors, setErrors] = useState(0);
-  const [isFinished, setIsFinished] = useState(false);
+  const [currentText, setCurrentText] = useState('');
+  const [userInput, setUserInput] = useState('');
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [correctChars, setCorrectChars] = useState(0);
   const [totalChars, setTotalChars] = useState(0);
-  const [typedChars, setTypedChars] = useState([]);
-  const [errorPositions, setErrorPositions] = useState(new Set());
-  const [totalKeystrokes, setTotalKeystrokes] = useState(0); 
-  const [correctKeystrokes, setCorrectKeystrokes] = useState(0);
-  const containerRef = useRef(null);
+  const [isFinished, setIsFinished] = useState(false);
+  const [results, setResults] = useState([]);
+  const [showResults, setShowResults] = useState(false);
 
-  const generateSentences = () => {
-    const sentences = [];
-    // Generate more sentences based on time duration
-    const sentenceCount = Math.max(8, Math.floor(timeLimit / 60) * 6); // 6 sentences per minute minimum
-    
-    for (let i = 0; i < sentenceCount; i++) {
-      const sentenceLength = Math.floor(Math.random() * 8) + 5; // 5-12 words per sentence
-      const sentence = [];
+  const inputRef = useRef(null);
 
-      for (let j = 0; j < sentenceLength; j++) {
-        let word;
-        const rand = Math.random();
-        if (rand < 0.6) {
-          word = commonWords[Math.floor(Math.random() * commonWords.length)];
-        } else if (rand < 0.9) {
-          word = easyWords[Math.floor(Math.random() * easyWords.length)];
-        } else {
-          word = hardWords[Math.floor(Math.random() * hardWords.length)];
-        }
-        sentence.push(word);
-      }
-
-      sentences.push(sentence.join(" ") + ".");
+  useEffect(() => {
+    const savedResults = localStorage.getItem('typingResults');
+    if (savedResults) {
+      setResults(JSON.parse(savedResults));
     }
-    return sentences.join(" ");
-  };
+    resetTest();
+  }, []);
 
   useEffect(() => {
-    setText(generateSentences());
-    setCurrentIndex(0);
-    setCorrectChars(0);
-    setTotalChars(0);
-    setErrors(0);
-    setTypedChars([]);
-    setErrorPositions(new Set());
-    setTotalKeystrokes(0);
-    setCorrectKeystrokes(0);
-  }, [timeLimit]);
-
-  useEffect(() => {
-    if (isStarted && timeLeft > 0 && !isFinished) {
-      const timer = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
+    let interval;
+    if (isActive && timeLeft > 0) {
+      interval = setInterval(() => {
+        setTimeLeft(time => {
+          if (time <= 1) {
+            finishTest();
+            return 0;
+          }
+          return time - 1;
+        });
       }, 1000);
-      return () => clearInterval(timer);
-    } else if (timeLeft === 0) {
-      setIsFinished(true);
-      calculateFinalStats();
     }
-  }, [isStarted, timeLeft, isFinished]);
-
-  const calculateFinalStats = () => {
-    const timeElapsed = (timeLimit - timeLeft) / 60;
-    if (timeElapsed > 0) {
-      const wordsTyped = correctChars / 5;
-      const finalWpm = Math.round(wordsTyped / timeElapsed);
-      // Use overall keystroke accuracy, not current text accuracy
-      const finalAccuracy = totalKeystrokes > 0 ? Math.round((correctKeystrokes / totalKeystrokes) * 100) : 100;
-
-      setWpm(finalWpm);
-      setAccuracy(finalAccuracy);
-    }
-  };
-
-  const scrollToCurrentPosition = () => {
-    if (containerRef.current) {
-      const container = containerRef.current;
-      const containerHeight = container.clientHeight;
-      const scrollTop = container.scrollTop;
-      const cursorElement = container.querySelector('.cursor-position');
-      
-      if (cursorElement) {
-        const cursorTop = cursorElement.offsetTop;
-        const cursorHeight = cursorElement.offsetHeight;
-        
-        // Check if cursor is outside visible area
-        if (cursorTop < scrollTop + 20 || cursorTop + cursorHeight > scrollTop + containerHeight - 20) {
-          // Scroll to keep cursor in middle of visible area
-          container.scrollTop = Math.max(0, cursorTop - containerHeight / 2);
-        }
-      }
-    }
-  };
-
-  const handleKeyPress = (e) => {
-    if (isFinished) return;
-
-    if (!isStarted) {
-      setIsStarted(true);
-    }
-
-    const key = e.key;
-
-    // Ignore Enter key and other special keys except Backspace
-    if (key === 'Enter' || (key.length !== 1 && key !== 'Backspace')) {
-      e.preventDefault();
-      return;
-    }
-
-    if (key === 'Backspace') {
-      if (currentIndex > 0) {
-        const newIndex = currentIndex - 1;
-        const newTypedChars = [...typedChars];
-        const newErrorPositions = new Set(errorPositions);
-
-        // Remove the character from tracking
-        const removedChar = newTypedChars.pop();
-
-        // If this position had an error, remove it
-        if (errorPositions.has(newIndex)) {
-          newErrorPositions.delete(newIndex);
-          setErrors(prev => prev - 1);
-        }
-
-        setCurrentIndex(newIndex);
-        setTypedChars(newTypedChars);
-        setErrorPositions(newErrorPositions);
-        setTotalChars(prev => Math.max(0, prev - 1));
-
-        // Recalculate correct chars based on actual comparison
-        const correctCount = newTypedChars.filter((char, idx) => char === text[idx]).length;
-        setCorrectChars(correctCount);
-
-        // Update stats with recalculated values - but don't change overall accuracy
-        updateStats(correctCount, newTypedChars.length);
-        
-        // Scroll to maintain cursor visibility
-        setTimeout(scrollToCurrentPosition, 0);
-      }
-      return;
-    }
-
-    // Prevent typing beyond the text length
-    if (currentIndex >= text.length) return;
-
-    const expectedChar = text[currentIndex];
-    const newTypedChars = [...typedChars, key];
-    const newErrorPositions = new Set(errorPositions);
-    const newTotalChars = totalChars + 1;
-
-    setTypedChars(newTypedChars);
-    setCurrentIndex(prev => prev + 1);
-    setTotalChars(newTotalChars);
-    
-    // Count every keystroke for overall accuracy
-    setTotalKeystrokes(prev => prev + 1);
-
-    let newCorrectChars = correctChars;
-
-    if (key === expectedChar) {
-      newCorrectChars = correctChars + 1;
-      setCorrectChars(newCorrectChars);
-      setCorrectKeystrokes(prev => prev + 1); // Count correct keystroke
-      // Remove error position if it was previously marked as error
-      if (errorPositions.has(currentIndex)) {
-        newErrorPositions.delete(currentIndex);
-        setErrors(prev => prev - 1);
-      }
-    } else {
-      // Mark this position as error if it's not already marked
-      if (!errorPositions.has(currentIndex)) {
-        newErrorPositions.add(currentIndex);
-        setErrors(prev => prev + 1);
-      }
-      // Don't increment correctKeystrokes for wrong keys
-    }
-
-    setErrorPositions(newErrorPositions);
-
-    // Update real-time stats with correct values
-    updateStats(newCorrectChars, newTotalChars);
-    
-    // Scroll to maintain cursor visibility
-    setTimeout(scrollToCurrentPosition, 0);
-  };
-
-  const updateStats = (correctCount, totalCount) => {
-    const timeElapsed = (timeLimit - timeLeft) / 60;
-    
-    // Calculate WPM based on correct characters only
-    if (timeElapsed > 0) {
-      const wordsTyped = correctCount / 5; // Standard: 5 characters = 1 word
-      const currentWpm = Math.round(wordsTyped / timeElapsed);
-      setWpm(currentWpm);
-    }
-    
-    // Calculate accuracy based on OVERALL keystrokes, not current text state
-    if (totalKeystrokes > 0) {
-      const currentAccuracy = Math.round((correctKeystrokes / totalKeystrokes) * 100);
-      setAccuracy(currentAccuracy);
-    } else {
-      setAccuracy(100);
-    }
-  };
+    return () => clearInterval(interval);
+  }, [isActive, timeLeft]);
 
   const resetTest = () => {
-    setText(generateSentences());
+    const randomText = sampleTexts[Math.floor(Math.random() * sampleTexts.length)];
+    setCurrentText(randomText);
+    setUserInput('');
     setCurrentIndex(0);
-    setIsStarted(false);
-    setTimeLeft(timeLimit);
-    setWpm(0);
-    setAccuracy(100);
-    setErrors(0);
     setCorrectChars(0);
     setTotalChars(0);
-    setTypedChars([]);
-    setErrorPositions(new Set());
+    setIsActive(false);
     setIsFinished(false);
-    if (containerRef.current) {
-      containerRef.current.focus();
-      containerRef.current.scrollTop = 0; // Reset scroll position
+    setTimeLeft(selectedTime);
+    setShowResults(false);
+  };
+
+  const startTest = () => {
+    setIsActive(true);
+    inputRef.current?.focus();
+  };
+
+  const finishTest = () => {
+    setIsActive(false);
+    setIsFinished(true);
+
+    const timeElapsed = selectedTime - timeLeft;
+    const wpm = Math.round((correctChars / 5) / (timeElapsed / 60));
+    const accuracy = Math.round((correctChars / totalChars) * 100) || 0;
+
+    const newResult = {
+      wpm,
+      accuracy,
+      time: timeElapsed,
+      date: new Date().toLocaleDateString()
+    };
+
+    const updatedResults = [...results, newResult];
+    setResults(updatedResults);
+    localStorage.setItem('typingResults', JSON.stringify(updatedResults));
+  };
+
+  const handleInputChange = (e) => {
+    if (!isActive) return;
+
+    const value = e.target.value;
+    setUserInput(value);
+
+    let correct = 0;
+    let total = value.length;
+
+    for (let i = 0; i < value.length; i++) {
+      if (i < currentText.length && value[i] === currentText[i]) {
+        correct++;
+      }
     }
+
+    setCorrectChars(correct);
+    setTotalChars(total);
+    setCurrentIndex(value.length);
+
+    if (value.length === currentText.length) {
+      finishTest();
+    }
+  };
+
+  const getCurrentWPM = () => {
+    const timeElapsed = selectedTime - timeLeft;
+    if (timeElapsed === 0) return 0;
+    return Math.round((correctChars / 5) / (timeElapsed / 60));
+  };
+
+  const getCurrentAccuracy = () => {
+    if (totalChars === 0) return 100;
+    return Math.round((correctChars / totalChars) * 100);
+  };
+
+  const getAverageStats = () => {
+    if (results.length === 0) return { avgWPM: 0, avgAccuracy: 0 };
+
+    const avgWPM = Math.round(results.reduce((sum, result) => sum + result.wpm, 0) / results.length);
+    const avgAccuracy = Math.round(results.reduce((sum, result) => sum + result.accuracy, 0) / results.length);
+
+    return { avgWPM, avgAccuracy };
   };
 
   const renderText = () => {
-    return text.split('').map((char, index) => {
-      let className = "text-gray-400";
+    return currentText.split('').map((char, index) => {
+      let className = 'text-gray-400';
 
-      if (index < typedChars.length) {
-        // Character has been typed
-        if (typedChars[index] === char) {
-          className = "text-green-700 bg-green-100";
-        } else {
-          className = "text-white bg-red-500";
-        }
+      if (index < currentIndex) {
+        className = userInput[index] === char ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
       } else if (index === currentIndex) {
-        // Current character cursor with special class for scrolling
-        className = "cursor-position bg-blue-300 border-l-2 border-blue-600 animate-pulse";
+        className = 'text-gray-900 bg-blue-200';
       }
 
       return (
-        <span key={index} className={`${className} ${char === ' ' ? 'mr-1' : ''}`}>
-          {char === ' ' ? '\u00A0' : char}
+        <span key={index} className={className}>
+          {char}
         </span>
       );
     });
   };
 
-  useEffect(() => {
-    if (containerRef.current && !isFinished) {
-      containerRef.current.focus();
-    }
-  }, [isFinished]);
-
-  useEffect(() => {
-  const handleSpacePreventScroll = (e) => {
-    if (
-      e.code === 'Space' &&
-      document.activeElement === containerRef.current &&
-      isStarted &&
-      !isFinished
-    ) {
-      e.preventDefault();
-    }
-  };
-
-  window.addEventListener("keydown", handleSpacePreventScroll);
-
-  return () => {
-    window.removeEventListener("keydown", handleSpacePreventScroll);
-  };
-}, [isStarted, isFinished]);
+  const { avgWPM, avgAccuracy } = getAverageStats();
 
   return (
-    
-    <div className=" max-w-4xl mx-auto p-6 bg-white rounded shadow mt-8 select-none">
-       
-      {/* Fixed Header - Always visible */}
-      <div className=" bg-white z-10 border-b pb-4 mb-6">
-        <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Select Time Duration:</label>
-            <select
-              className="p-3 border rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              value={timeLimit / 60}
-              onChange={(e) => {
-                const minutes = Number(e.target.value);
-                setTimeLimit(minutes * 60);
-                setTimeLeft(minutes * 60);
-                resetTest();
-              }}
-              disabled={isStarted && !isFinished}
-            >
-              {[1, 2, 3, 5, 10, 15].map((min) => (
-                <option key={min} value={min}>{min} minute{min > 1 ? 's' : ''}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="flex items-center space-x-6">
-            <button
-              onClick={resetTest}
-              className="flex gap-1 px-6 py-2 mt-4 text-white font-semibold rounded-full transition-transform transform hover:scale-105 active:scale-95 bg-gradient-to-r from-black/50 to-black disabled:opacity-50"
-            >
-              <RefreshCw />{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
-            </button>
-            
-            {/* Real-time stats */}
-            <div className="flex space-x-4 text-sm">
-              <div className="text-center">
-                <div className="text-lg text-blue-600 font-bold">{wpm}</div>
-                <div className="text-xs text-gray-500">WPM</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg text-green-600 font-bold">{accuracy}%</div>
-                <div className="text-xs text-gray-500">Accuracy</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg text-red-600 font-bold">{errors}</div>
-                <div className="text-xs text-gray-500">Errors</div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div className="max-w-4xl mx-auto">
+      {/* Test Controls */}
+      <div className="max-w-4xl mx-auto text-center mb-8 mt-8">
+        <h1 className="text-4xl font-bold text-black-400 mb-2">Welcome to Solo Typing Practice!</h1>
+        <p className="text-gray-600 text-lg">
+          Improve your typing speed and accuracy with custom text passages. Choose your time limit and start typing!
+        </p>
       </div>
 
-      {isFinished ? (
-        <div className="text-center">
-          <h2 className="text-3xl font-bold text-gray-800 mb-6">Test Complete!</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
-              <div className="text-sm text-blue-600 font-medium">Typing Speed</div>
-              <div className="text-3xl font-bold text-blue-800">{wpm}</div>
-              <div className="text-xs text-blue-500">Words Per Minute</div>
+      <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center space-x-4">
+            <label className="text-gray-700 font-medium">Time:</label>
+            <select
+              value={selectedTime}
+              onChange={(e) => {
+                setSelectedTime(Number(e.target.value));
+                setTimeLeft(Number(e.target.value));
+              }}
+              disabled={isActive}
+              className="border border-gray-300 rounded-lg px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value={15}>15 seconds</option>
+              <option value={30}>30 seconds</option>
+              <option value={60}>1 minute</option>
+              <option value={120}>2 minutes</option>
+              <option value={300}>5 minutes</option>
+            </select>
+          </div>
+
+          <div className="flex items-center space-x-6">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{timeLeft}s</div>
+              <div className="text-sm text-gray-600">Time Left</div>
             </div>
-            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
-              <div className="text-sm text-green-600 font-medium">Accuracy</div>
-              <div className="text-3xl font-bold text-green-800">{accuracy}%</div>
-              <div className="text-xs text-green-500">Correct Characters</div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{getCurrentWPM()}</div>
+              <div className="text-sm text-gray-600">WPM</div>
             </div>
-            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
-              <div className="text-sm text-red-600 font-medium">Errors</div>
-              <div className="text-3xl font-bold text-red-800">{errors}</div>
-              <div className="text-xs text-red-500">Incorrect Keystrokes</div>
-            </div>
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
-              <div className="text-sm text-purple-600 font-medium">Characters</div>
-              <div className="text-3xl font-bold text-purple-800">{correctChars}/{totalChars}</div>
-              <div className="text-xs text-purple-500">Correct/Total</div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">{getCurrentAccuracy()}%</div>
+              <div className="text-sm text-gray-600">Accuracy</div>
             </div>
           </div>
-          <button
-            onClick={resetTest}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-4 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-md hover:shadow-lg font-medium text-lg"
-          >
-            Try Again
-          </button>
         </div>
-      ) : (
-        <>
-          <div
-            ref={containerRef}
-            className="bg-gray-50 p-6 rounded-lg font-mono text-lg leading-relaxed mb-6 min-h-[300px] max-h-[300px] overflow-y-auto border-2 border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 cursor-text"
-            tabIndex={0}
-            onKeyDown={handleKeyPress}
-            style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}
-          >
+
+        {/* Typing Box */}
+        <div className="mb-6">
+          <div className="bg-gray-50 rounded-lg p-6 mb-4 text-lg leading-relaxed font-mono">
             {renderText()}
           </div>
 
-          <div className="text-center text-gray-600">
-            <p className="text-sm">
-              {isStarted
-                ? "Keep typing! Use Backspace to correct mistakes. Wrong letters are highlighted in red."
-                : "Click on the text area above and start typing to begin the test."
-              }
-            </p>
-            <p className="text-xs mt-2 text-gray-500">
-              Characters typed: {typedChars.length} | Progress: {Math.round((currentIndex / text.length) * 100)}% | Overall Accuracy: {totalKeystrokes > 0 ? Math.round((correctKeystrokes / totalKeystrokes) * 100) : 100}% ({correctKeystrokes}/{totalKeystrokes} keystrokes)
-            </p>
-          </div>
-        </>
-      )}
-      
-    </div>
-    
-  );
-};
+          <input
+            ref={inputRef}
+            type="text"
+            value={userInput}
+            onChange={handleInputChange}
+            disabled={!isActive || isFinished}
+            placeholder={isActive ? "Start typing..." : "Click Start to begin"}
+            className="w-full p-4 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+          />
+        </div>
 
-export default SoloPractice;
+        {/* Buttons */}
+        <div className="flex justify-center space-x-4">
+          {!isActive && !isFinished && (
+            <Button onClick={startTest} size="lg">Start Test</Button>
+          )}
+          {(isActive || isFinished) && (
+            <Button onClick={resetTest} variant="outline" size="lg">Reset</Button>
+          )}
+          {results.length > 0 && (
+            <Button onClick={() => setShowResults(!showResults)} variant="secondary" size="lg">
+              {showResults ? 'Hide Results' : 'Show Results'}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Results after completion */}
+      {isFinished && (
+        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Test Complete!</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <div className="text-3xl font-bold text-blue-600">{getCurrentWPM()}</div>
+              <div className="text-gray-600">Words Per Minute</div>
+            </div>
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <div className="text-3xl font-bold text-green-600">{getCurrentAccuracy()}%</div>
+              <div className="text-gray-600">Accuracy</div>
+            </div>
+            <div className="text-center p-4 bg-purple-50 rounded-lg">
+              <div className="text-3xl font-bold text-purple-600">{selectedTime - timeLeft}s</div>
+              <div className="text-gray-600">Time Taken</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Historical Results */}
+      {showResults && results.length > 0 && (
+        <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Your Performance</h2>
+            <div className="text-sm text-gray-600">
+              Average: {avgWPM} WPM | {avgAccuracy}% Accuracy
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h3 className="font-semibold text-gray-800 mb-2">Personal Best</h3>
+              <div className="text-2xl font-bold text-blue-600">
+                {Math.max(...results.map(r => r.wpm))} WPM
+              </div>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h3 className="font-semibold text-gray-800 mb-2">Best Accuracy</h3>
+              <div className="text-2xl font-bold text-green-600">
+                {Math.max(...results.map(r => r.accuracy))}%
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left">Date</th>
+                  <th className="px-4 py-2 text-left">WPM</th>
+                  <th className="px-4 py-2 text-left">Accuracy</th>
+                  <th className="px-4 py-2 text-left">Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {results.slice(-10).reverse().map((result, index) => (
+                  <tr key={index} className="border-t">
+                    <td className="px-4 py-2">{result.date}</td>
+                    <td className="px-4 py-2 font-semibold text-blue-600">{result.wpm}</td>
+                    <td className="px-4 py-2 font-semibold text-green-600">{result.accuracy}%</td>
+                    <td className="px-4 py-2">{result.time}s</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
