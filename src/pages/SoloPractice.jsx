@@ -1,6 +1,4 @@
-// SoloPractice.jsx
 import { useState, useEffect, useRef } from 'react';
-import Button from '../components/ui/Button.jsx';
 
 const sampleTexts = [
   "The quick brown fox jumps over the lazy dog. This pangram contains every letter of the alphabet at least once.",
@@ -12,13 +10,38 @@ const sampleTexts = [
   "Typing 5,000 words a day requires discipline, practice, and a structured routine—it's not just about speed, but also about accuracy.",
   "The spaceship launched at 3:14 PM, traveling at 28,000 km/h, orbiting Earth in precisely 92.5 minutes.",
   "Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC.",
-  "Debugging is like being the detective in a crime movie where you are also the murderer. Check line 42—it’s usually guilty.",
+  "Debugging is like being the detective in a crime movie where you are also the murderer. Check line 42—it's usually guilty.",
   "If a train leaves Station A at 80 km/h and another leaves Station B at 100 km/h, when do they meet? Only math will tell.",
   "He typed so fast, his keyboard started showing signs of smoke. 120 WPM is not for the faint-hearted.",
   "The algorithm ran in O(n log n) time, optimizing performance by using a priority queue and a min-heap structure.",
   "Zebras zigzagged through the zoo zone, zealously zapping zany zombies with zero hesitation."
 ];
 
+const Button = ({ children, onClick, variant = 'primary', size = 'md', disabled = false }) => {
+  const baseClasses = 'font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2';
+  
+  const variants = {
+    primary: 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500',
+    secondary: 'bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-500',
+    outline: 'border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 focus:ring-blue-500'
+  };
+  
+  const sizes = {
+    sm: 'px-3 py-1.5 text-sm',
+    md: 'px-4 py-2',
+    lg: 'px-6 py-3 text-lg'
+  };
+  
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`${baseClasses} ${variants[variant]} ${sizes[size]} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+    >
+      {children}
+    </button>
+  );
+};
 
 export default function SoloPractice() {
   const [selectedTime, setSelectedTime] = useState(60);
@@ -28,18 +51,18 @@ export default function SoloPractice() {
   const [userInput, setUserInput] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [correctChars, setCorrectChars] = useState(0);
-  const [totalChars, setTotalChars] = useState(0);
+  const [totalCharsTyped, setTotalCharsTyped] = useState(0); // Total characters ever typed (including mistakes)
+  const [mistakeCount, setMistakeCount] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
   const [results, setResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [errorPosition, setErrorPosition] = useState(-1);
 
   const inputRef = useRef(null);
 
   useEffect(() => {
-    const savedResults = localStorage.getItem('typingResults');
-    if (savedResults) {
-      setResults(JSON.parse(savedResults));
-    }
+    // Note: localStorage is not available in Claude artifacts, using in-memory storage
     resetTest();
   }, []);
 
@@ -65,11 +88,14 @@ export default function SoloPractice() {
     setUserInput('');
     setCurrentIndex(0);
     setCorrectChars(0);
-    setTotalChars(0);
+    setTotalCharsTyped(0);
+    setMistakeCount(0);
     setIsActive(false);
     setIsFinished(false);
     setTimeLeft(selectedTime);
     setShowResults(false);
+    setHasError(false);
+    setErrorPosition(-1);
   };
 
   const startTest = () => {
@@ -83,40 +109,140 @@ export default function SoloPractice() {
 
     const timeElapsed = selectedTime - timeLeft;
     const wpm = Math.round((correctChars / 5) / (timeElapsed / 60));
-    const accuracy = Math.round((correctChars / totalChars) * 100) || 0;
+    const accuracy = totalCharsTyped > 0 ? Math.round(((totalCharsTyped - mistakeCount) / totalCharsTyped) * 100) : 100;
 
     const newResult = {
       wpm,
       accuracy,
       time: timeElapsed,
-      date: new Date().toLocaleDateString()
+      date: new Date().toLocaleDateString(),
+      mistakes: mistakeCount
     };
 
     const updatedResults = [...results, newResult];
     setResults(updatedResults);
-    localStorage.setItem('typingResults', JSON.stringify(updatedResults));
+  };
+
+  const findWordBoundaries = (text, position) => {
+    // Find the start of current word
+    let wordStart = position;
+    while (wordStart > 0 && text[wordStart - 1] !== ' ') {
+      wordStart--;
+    }
+    
+    // Find the end of current word
+    let wordEnd = position;
+    while (wordEnd < text.length && text[wordEnd] !== ' ') {
+      wordEnd++;
+    }
+    
+    return { wordStart, wordEnd };
   };
 
   const handleInputChange = (e) => {
     if (!isActive) return;
 
     const value = e.target.value;
-    setUserInput(value);
+    const previousLength = userInput.length;
+    const currentLength = value.length;
+    
+    // Handle backspace
+    if (currentLength < previousLength) {
+      setUserInput(value);
+      setCurrentIndex(value.length);
+      
+      // If we're backspacing from an error, check if we can continue
+      if (hasError) {
+        // Check if we're still in error state
+        let stillHasError = false;
+        let wrongCount = 0;
+        let firstErrorPos = -1;
+        
+        for (let i = 0; i < value.length; i++) {
+          if (i < currentText.length && value[i] !== currentText[i]) {
+            if (firstErrorPos === -1) firstErrorPos = i;
+            wrongCount++;
+            stillHasError = true;
+          } else if (stillHasError) {
+            // If we hit a correct character after errors, reset wrong count
+            wrongCount = 0;
+          }
+        }
+        
+        if (!stillHasError || wrongCount === 0) {
+          setHasError(false);
+          setErrorPosition(-1);
+        }
+      }
+      return;
+    }
 
-    let correct = 0;
-    let total = value.length;
-
-    for (let i = 0; i < value.length; i++) {
-      if (i < currentText.length && value[i] === currentText[i]) {
-        correct++;
+    // If there's an error and user is trying to type forward, check if we should allow it
+    if (hasError && currentLength > previousLength) {
+      // Count consecutive wrong characters from the first error position
+      let wrongCount = 0;
+      let firstErrorInWord = -1;
+      
+      // Find the first error in current word
+      const { wordStart } = findWordBoundaries(currentText, errorPosition);
+      
+      for (let i = wordStart; i < value.length && i < currentText.length; i++) {
+        if (value[i] !== currentText[i]) {
+          if (firstErrorInWord === -1) firstErrorInWord = i;
+          wrongCount++;
+        } else if (firstErrorInWord !== -1) {
+          // Hit a correct character after errors, stop counting
+          break;
+        }
+      }
+      
+      // If we already have 3 wrong characters in this word, don't allow more typing
+      if (wrongCount >= 3) {
+        return; // Stop typing, but keep the wrong characters visible
       }
     }
 
+    setUserInput(value);
+
+    // Count total characters typed (including this new character)
+    if (currentLength > previousLength) {
+      setTotalCharsTyped(prev => prev + 1);
+    }
+
+    let correct = 0;
+    let mistakes = mistakeCount;
+    let hasNewError = false;
+    let newErrorPos = -1;
+
+    // Check each character
+    for (let i = 0; i < value.length; i++) {
+      if (i < currentText.length && value[i] === currentText[i]) {
+        correct++;
+      } else if (i < currentText.length) {
+        // This is a mistake
+        if (i >= previousLength) {
+          // This is a new mistake
+          mistakes++;
+          if (!hasNewError) {
+            hasNewError = true;
+            newErrorPos = i;
+          }
+        }
+      }
+    }
+
+    // Set error state if we have new errors
+    if (hasNewError) {
+      setHasError(true);
+      if (errorPosition === -1) setErrorPosition(newErrorPos);
+    }
+
     setCorrectChars(correct);
-    setTotalChars(total);
+    setMistakeCount(mistakes);
     setCurrentIndex(value.length);
 
-    if (value.length === currentText.length) {
+    // Check if text is completed
+    if (value.length === currentText.length && value === currentText) {
       finishTest();
     }
   };
@@ -128,8 +254,8 @@ export default function SoloPractice() {
   };
 
   const getCurrentAccuracy = () => {
-    if (totalChars === 0) return 100;
-    return Math.round((correctChars / totalChars) * 100);
+    if (totalCharsTyped === 0) return 100;
+    return Math.round(((totalCharsTyped - mistakeCount) / totalCharsTyped) * 100);
   };
 
   const getAverageStats = () => {
@@ -148,7 +274,7 @@ export default function SoloPractice() {
       if (index < currentIndex) {
         className = userInput[index] === char ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
       } else if (index === currentIndex) {
-        className = 'text-gray-900 bg-blue-200';
+        className = 'text-gray-900 bg-blue-200 animate-pulse';
       }
 
       return (
@@ -165,7 +291,7 @@ export default function SoloPractice() {
     <div className="max-w-4xl mx-auto">
       {/* Test Controls */}
       <div className="max-w-4xl mx-auto text-center mb-8 mt-8">
-        <h1 className="text-4xl font-bold text-black-400 mb-2">Welcome to Solo Typing Practice!</h1>
+        <h1 className="text-4xl font-bold text-gray-800 mb-2">Welcome to Solo Typing Practice!</h1>
         <p className="text-gray-600 text-lg">
           Improve your typing speed and accuracy with custom text passages. Choose your time limit and start typing!
         </p>
@@ -205,6 +331,10 @@ export default function SoloPractice() {
               <div className="text-2xl font-bold text-purple-600">{getCurrentAccuracy()}%</div>
               <div className="text-sm text-gray-600">Accuracy</div>
             </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-red-600">{mistakeCount}</div>
+              <div className="text-sm text-gray-600">Mistakes</div>
+            </div>
           </div>
         </div>
 
@@ -221,8 +351,19 @@ export default function SoloPractice() {
             onChange={handleInputChange}
             disabled={!isActive || isFinished}
             placeholder={isActive ? "Start typing..." : "Click Start to begin"}
-            className="w-full p-4 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+            className={`w-full p-4 border rounded-lg text-lg focus:outline-none focus:ring-2 disabled:bg-gray-100 ${
+              hasError 
+                ? 'border-red-500 focus:ring-red-500 bg-red-50' 
+                : 'border-gray-300 focus:ring-blue-500'
+            }`}
           />
+          
+          {hasError && (
+            <div className="mt-2 text-sm text-red-600 flex items-center">
+              <span className="mr-2">⚠️</span>
+              You have made mistakes. Fix them by backspacing check again.
+            </div>
+          )}
         </div>
 
         {/* Buttons */}
@@ -245,7 +386,7 @@ export default function SoloPractice() {
       {isFinished && (
         <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Test Complete!</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="text-center p-4 bg-blue-50 rounded-lg">
               <div className="text-3xl font-bold text-blue-600">{getCurrentWPM()}</div>
               <div className="text-gray-600">Words Per Minute</div>
@@ -257,6 +398,10 @@ export default function SoloPractice() {
             <div className="text-center p-4 bg-purple-50 rounded-lg">
               <div className="text-3xl font-bold text-purple-600">{selectedTime - timeLeft}s</div>
               <div className="text-gray-600">Time Taken</div>
+            </div>
+            <div className="text-center p-4 bg-red-50 rounded-lg">
+              <div className="text-3xl font-bold text-red-600">{mistakeCount}</div>
+              <div className="text-gray-600">Total Mistakes</div>
             </div>
           </div>
         </div>
@@ -276,13 +421,13 @@ export default function SoloPractice() {
             <div className="p-4 bg-gray-50 rounded-lg">
               <h3 className="font-semibold text-gray-800 mb-2">Personal Best</h3>
               <div className="text-2xl font-bold text-blue-600">
-                {Math.max(...results.map(r => r.wpm))} WPM
+                {results.length > 0 ? Math.max(...results.map(r => r.wpm)) : 0} WPM
               </div>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
               <h3 className="font-semibold text-gray-800 mb-2">Best Accuracy</h3>
               <div className="text-2xl font-bold text-green-600">
-                {Math.max(...results.map(r => r.accuracy))}%
+                {results.length > 0 ? Math.max(...results.map(r => r.accuracy)) : 0}%
               </div>
             </div>
           </div>
@@ -295,6 +440,7 @@ export default function SoloPractice() {
                   <th className="px-4 py-2 text-left">WPM</th>
                   <th className="px-4 py-2 text-left">Accuracy</th>
                   <th className="px-4 py-2 text-left">Time</th>
+                  <th className="px-4 py-2 text-left">Mistakes</th>
                 </tr>
               </thead>
               <tbody>
@@ -304,6 +450,7 @@ export default function SoloPractice() {
                     <td className="px-4 py-2 font-semibold text-blue-600">{result.wpm}</td>
                     <td className="px-4 py-2 font-semibold text-green-600">{result.accuracy}%</td>
                     <td className="px-4 py-2">{result.time}s</td>
+                    <td className="px-4 py-2 font-semibold text-red-600">{result.mistakes || 0}</td>
                   </tr>
                 ))}
               </tbody>
