@@ -167,7 +167,7 @@ function Home() {
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-8 text-center">
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">Ready to Improve Your Typing?</h3>
                 <p className="text-gray-600 mb-6">
-                  Join thousands of users who have already improved their typing skills with TypeMaster.
+                  Join thousands of users who have already improved their typing skills with Varnavelocity.
                 </p>
                 
               </div>
