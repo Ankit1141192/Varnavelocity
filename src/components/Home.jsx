@@ -207,10 +207,12 @@ function Home({ theme = 'light' }) {
                 </li>
               </ul>
             </div>
-            <div className="text-center">
-              <div className="w-full h-48 sm:h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-                <span className={`text-sm ${currentTheme.mutedText}`}>Keyboard Image Placeholder</span>
-              </div>
+             <div className="text-center">
+              <img 
+                src="https://readdy.ai/api/search-image?query=hands%20typing%20on%20keyboard%20with%20proper%20finger%20positioning%20close%20up%20view%20of%20fingers%20on%20keys%20educational%20typing%20technique%20demonstration%20clean%20modern%20keyboard%20with%20soft%20lighting%20professional%20photography%20style&width=400&height=300&seq=learning-hands&orientation=landscape"
+                alt="Typing technique demonstration"
+                className="rounded-lg shadow-md object-cover w-full h-64"
+              />
             </div>
           </div>
         </div>
