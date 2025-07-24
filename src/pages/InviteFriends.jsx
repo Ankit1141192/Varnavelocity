@@ -53,7 +53,7 @@ function InviteFriends({ theme = "light" }) {
   ];
 
   const generateRandomText = () => {
-    const numWords = 15 + Math.floor(Math.random() * 10); // 15-25 words
+    const numWords = 25 + Math.floor(Math.random() * 10); // 15-25 words
     const shuffled = [...wordBank].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, numWords).join(" ");
   };
