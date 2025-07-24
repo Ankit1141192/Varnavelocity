@@ -101,7 +101,7 @@ const Navbar = ({ theme, setTheme }) => {
         <div className="flex items-center space-x-4">
           {/* Theme toggle using your custom SVG */}
           <button
-            // onClick={toggleTheme}
+            onClick={toggleTheme}
             className="size-8 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition border border-slate-300 rounded-md"
             title="Toggle Theme"
           >

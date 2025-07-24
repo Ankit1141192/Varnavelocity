@@ -17,13 +17,20 @@ const sampleTexts = [
   "Zebras zigzagged through the zoo zone, zealously zapping zany zombies with zero hesitation."
 ];
 
-const Button = ({ children, onClick, variant = 'primary', size = 'md', disabled = false }) => {
+const Button = ({ children, onClick, variant = 'primary', size = 'md', disabled = false, theme = 'light' }) => {
   const baseClasses = 'font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2';
   
   const variants = {
-    primary: 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500',
-    secondary: 'bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-500',
-    outline: 'border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 focus:ring-blue-500'
+    light: {
+      primary: 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500',
+      secondary: 'bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-500',
+      outline: 'border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 focus:ring-blue-500'
+    },
+    dark: {
+      primary: 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500',
+      secondary: 'bg-gray-700 hover:bg-gray-600 text-white focus:ring-gray-400',
+      outline: 'border border-gray-600 bg-gray-800 hover:bg-gray-700 text-gray-200 focus:ring-blue-500'
+    }
   };
   
   const sizes = {
@@ -36,14 +43,14 @@ const Button = ({ children, onClick, variant = 'primary', size = 'md', disabled 
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`${baseClasses} ${variants[variant]} ${sizes[size]} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+      className={`${baseClasses} ${variants[theme][variant]} ${sizes[size]} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
       {children}
     </button>
   );
 };
 
-export default function SoloPractice() {
+export default function SoloPractice({ theme = "light" }) {
   const [selectedTime, setSelectedTime] = useState(60);
   const [isActive, setIsActive] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60);
@@ -51,7 +58,7 @@ export default function SoloPractice() {
   const [userInput, setUserInput] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [correctChars, setCorrectChars] = useState(0);
-  const [totalCharsTyped, setTotalCharsTyped] = useState(0); // Total characters ever typed (including mistakes)
+  const [totalCharsTyped, setTotalCharsTyped] = useState(0);
   const [mistakeCount, setMistakeCount] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
   const [results, setResults] = useState([]);
@@ -61,8 +68,49 @@ export default function SoloPractice() {
 
   const inputRef = useRef(null);
 
+  // Theme-based styles
+  const themeStyles = {
+    light: {
+      background: 'bg-gray-50',
+      cardBackground: 'bg-white',
+      text: 'text-gray-900',
+      subText: 'text-gray-600',
+      textDisplay: 'bg-gray-50',
+      tableHeader: 'bg-gray-50',
+      border: 'border-gray-300',
+      inputBg: 'bg-white',
+      inputDisabled: 'disabled:bg-gray-100',
+      statCards: {
+        blue: 'bg-blue-50',
+        green: 'bg-green-50',
+        purple: 'bg-purple-50',
+        red: 'bg-red-50',
+        gray: 'bg-gray-50'
+      }
+    },
+    dark: {
+      background: 'bg-gray-900',
+      cardBackground: 'bg-gray-800',
+      text: 'text-gray-100',
+      subText: 'text-gray-300',
+      textDisplay: 'bg-gray-700',
+      tableHeader: 'bg-gray-700',
+      border: 'border-gray-600',
+      inputBg: 'bg-gray-700 text-gray-100',
+      inputDisabled: 'disabled:bg-gray-600',
+      statCards: {
+        blue: 'bg-blue-900',
+        green: 'bg-green-900',
+        purple: 'bg-purple-900',
+        red: 'bg-red-900',
+        gray: 'bg-gray-700'
+      }
+    }
+  };
+
+  const currentTheme = themeStyles[theme];
+
   useEffect(() => {
-    // Note: localStorage is not available in Claude artifacts, using in-memory storage
     resetTest();
   }, []);
 
@@ -124,13 +172,11 @@ export default function SoloPractice() {
   };
 
   const findWordBoundaries = (text, position) => {
-    // Find the start of current word
     let wordStart = position;
     while (wordStart > 0 && text[wordStart - 1] !== ' ') {
       wordStart--;
     }
     
-    // Find the end of current word
     let wordEnd = position;
     while (wordEnd < text.length && text[wordEnd] !== ' ') {
       wordEnd++;
@@ -146,14 +192,11 @@ export default function SoloPractice() {
     const previousLength = userInput.length;
     const currentLength = value.length;
     
-    // Handle backspace
     if (currentLength < previousLength) {
       setUserInput(value);
       setCurrentIndex(value.length);
       
-      // If we're backspacing from an error, check if we can continue
       if (hasError) {
-        // Check if we're still in error state
         let stillHasError = false;
         let wrongCount = 0;
         let firstErrorPos = -1;
@@ -164,7 +207,6 @@ export default function SoloPractice() {
             wrongCount++;
             stillHasError = true;
           } else if (stillHasError) {
-            // If we hit a correct character after errors, reset wrong count
             wrongCount = 0;
           }
         }
@@ -177,13 +219,10 @@ export default function SoloPractice() {
       return;
     }
 
-    // If there's an error and user is trying to type forward, check if we should allow it
     if (hasError && currentLength > previousLength) {
-      // Count consecutive wrong characters from the first error position
       let wrongCount = 0;
       let firstErrorInWord = -1;
       
-      // Find the first error in current word
       const { wordStart } = findWordBoundaries(currentText, errorPosition);
       
       for (let i = wordStart; i < value.length && i < currentText.length; i++) {
@@ -191,20 +230,17 @@ export default function SoloPractice() {
           if (firstErrorInWord === -1) firstErrorInWord = i;
           wrongCount++;
         } else if (firstErrorInWord !== -1) {
-          // Hit a correct character after errors, stop counting
           break;
         }
       }
       
-      // If we already have 3 wrong characters in this word, don't allow more typing
       if (wrongCount >= 3) {
-        return; // Stop typing, but keep the wrong characters visible
+        return;
       }
     }
 
     setUserInput(value);
 
-    // Count total characters typed (including this new character)
     if (currentLength > previousLength) {
       setTotalCharsTyped(prev => prev + 1);
     }
@@ -214,14 +250,11 @@ export default function SoloPractice() {
     let hasNewError = false;
     let newErrorPos = -1;
 
-    // Check each character
     for (let i = 0; i < value.length; i++) {
       if (i < currentText.length && value[i] === currentText[i]) {
         correct++;
       } else if (i < currentText.length) {
-        // This is a mistake
         if (i >= previousLength) {
-          // This is a new mistake
           mistakes++;
           if (!hasNewError) {
             hasNewError = true;
@@ -231,7 +264,6 @@ export default function SoloPractice() {
       }
     }
 
-    // Set error state if we have new errors
     if (hasNewError) {
       setHasError(true);
       if (errorPosition === -1) setErrorPosition(newErrorPos);
@@ -241,7 +273,6 @@ export default function SoloPractice() {
     setMistakeCount(mistakes);
     setCurrentIndex(value.length);
 
-    // Check if text is completed
     if (value.length === currentText.length && value === currentText) {
       finishTest();
     }
@@ -269,12 +300,16 @@ export default function SoloPractice() {
 
   const renderText = () => {
     return currentText.split('').map((char, index) => {
-      let className = 'text-gray-400';
+      let className = theme === 'dark' ? 'text-gray-500' : 'text-gray-400';
 
       if (index < currentIndex) {
-        className = userInput[index] === char ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
+        className = userInput[index] === char 
+          ? 'text-green-600 bg-green-100' 
+          : 'text-red-600 bg-red-100';
       } else if (index === currentIndex) {
-        className = 'text-gray-900 bg-blue-200 animate-pulse';
+        className = theme === 'dark' 
+          ? 'text-gray-100 bg-blue-600 animate-pulse' 
+          : 'text-gray-900 bg-blue-200 animate-pulse';
       }
 
       return (
@@ -288,19 +323,21 @@ export default function SoloPractice() {
   const { avgWPM, avgAccuracy } = getAverageStats();
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className={`max-w-4xl mx-auto min-h-screen ${currentTheme.background}`}>
       {/* Test Controls */}
-      <div className="max-w-4xl mx-auto text-center mb-8 mt-8">
-        <h1 className="text-4xl font-bold text-gray-800 mb-2">Welcome to Solo Typing Practice!</h1>
-        <p className="text-gray-600 text-lg">
+      <div className="max-w-4xl mx-auto text-center mb-8 pt-8">
+        <h1 className={`text-4xl font-bold mb-2 ${currentTheme.text}`}>
+          Welcome to Solo Typing Practice!
+        </h1>
+        <p className={`text-lg ${currentTheme.subText}`}>
           Improve your typing speed and accuracy with custom text passages. Choose your time limit and start typing!
         </p>
       </div>
 
-      <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+      <div className={`rounded-lg shadow-lg p-8 mb-8 ${currentTheme.cardBackground}`}>
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center space-x-4">
-            <label className="text-gray-700 font-medium">Time:</label>
+            <label className={`font-medium ${currentTheme.text}`}>Time:</label>
             <select
               value={selectedTime}
               onChange={(e) => {
@@ -308,7 +345,7 @@ export default function SoloPractice() {
                 setTimeLeft(Number(e.target.value));
               }}
               disabled={isActive}
-              className="border border-gray-300 rounded-lg px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`${currentTheme.border} ${currentTheme.inputBg} rounded-lg px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500`}
             >
               <option value={15}>15 seconds</option>
               <option value={30}>30 seconds</option>
@@ -321,26 +358,26 @@ export default function SoloPractice() {
           <div className="flex items-center space-x-6">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{timeLeft}s</div>
-              <div className="text-sm text-gray-600">Time Left</div>
+              <div className={`text-sm ${currentTheme.subText}`}>Time Left</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">{getCurrentWPM()}</div>
-              <div className="text-sm text-gray-600">WPM</div>
+              <div className={`text-sm ${currentTheme.subText}`}>WPM</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">{getCurrentAccuracy()}%</div>
-              <div className="text-sm text-gray-600">Accuracy</div>
+              <div className={`text-sm ${currentTheme.subText}`}>Accuracy</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-red-600">{mistakeCount}</div>
-              <div className="text-sm text-gray-600">Mistakes</div>
+              <div className={`text-sm ${currentTheme.subText}`}>Mistakes</div>
             </div>
           </div>
         </div>
 
         {/* Typing Box */}
         <div className="mb-6">
-          <div className="bg-gray-50 rounded-lg p-6 mb-4 text-lg leading-relaxed font-mono">
+          <div className={`${currentTheme.textDisplay} rounded-lg p-6 mb-4 text-lg leading-relaxed font-mono`}>
             {renderText()}
           </div>
 
@@ -351,17 +388,17 @@ export default function SoloPractice() {
             onChange={handleInputChange}
             disabled={!isActive || isFinished}
             placeholder={isActive ? "Start typing..." : "Click Start to begin"}
-            className={`w-full p-4 border rounded-lg text-lg focus:outline-none focus:ring-2 disabled:bg-gray-100 ${
+            className={`w-full p-4 border rounded-lg text-lg focus:outline-none focus:ring-2 ${currentTheme.inputDisabled} ${
               hasError 
                 ? 'border-red-500 focus:ring-red-500 bg-red-50' 
-                : 'border-gray-300 focus:ring-blue-500'
+                : `${currentTheme.border} ${currentTheme.inputBg} focus:ring-blue-500`
             }`}
           />
           
           {hasError && (
             <div className="mt-2 text-sm text-red-600 flex items-center">
               <span className="mr-2">⚠️</span>
-              You have made mistakes. Fix them by backspacing check again.
+              You have made mistakes. Fix them by backspacing and check again.
             </div>
           )}
         </div>
@@ -369,13 +406,13 @@ export default function SoloPractice() {
         {/* Buttons */}
         <div className="flex justify-center space-x-4">
           {!isActive && !isFinished && (
-            <Button onClick={startTest} size="lg">Start Test</Button>
+            <Button onClick={startTest} size="lg" theme={theme}>Start Test</Button>
           )}
           {(isActive || isFinished) && (
-            <Button onClick={resetTest} variant="outline" size="lg">Reset</Button>
+            <Button onClick={resetTest} variant="outline" size="lg" theme={theme}>Reset</Button>
           )}
           {results.length > 0 && (
-            <Button onClick={() => setShowResults(!showResults)} variant="secondary" size="lg">
+            <Button onClick={() => setShowResults(!showResults)} variant="secondary" size="lg" theme={theme}>
               {showResults ? 'Hide Results' : 'Show Results'}
             </Button>
           )}
@@ -384,24 +421,24 @@ export default function SoloPractice() {
 
       {/* Results after completion */}
       {isFinished && (
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Test Complete!</h2>
+        <div className={`rounded-lg shadow-lg p-8 mb-8 ${currentTheme.cardBackground}`}>
+          <h2 className={`text-2xl font-bold mb-4 ${currentTheme.text}`}>Test Complete!</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
+            <div className={`text-center p-4 rounded-lg ${currentTheme.statCards.blue}`}>
               <div className="text-3xl font-bold text-blue-600">{getCurrentWPM()}</div>
-              <div className="text-gray-600">Words Per Minute</div>
+              <div className={currentTheme.subText}>Words Per Minute</div>
             </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg">
+            <div className={`text-center p-4 rounded-lg ${currentTheme.statCards.green}`}>
               <div className="text-3xl font-bold text-green-600">{getCurrentAccuracy()}%</div>
-              <div className="text-gray-600">Accuracy</div>
+              <div className={currentTheme.subText}>Accuracy</div>
             </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
+            <div className={`text-center p-4 rounded-lg ${currentTheme.statCards.purple}`}>
               <div className="text-3xl font-bold text-purple-600">{selectedTime - timeLeft}s</div>
-              <div className="text-gray-600">Time Taken</div>
+              <div className={currentTheme.subText}>Time Taken</div>
             </div>
-            <div className="text-center p-4 bg-red-50 rounded-lg">
+            <div className={`text-center p-4 rounded-lg ${currentTheme.statCards.red}`}>
               <div className="text-3xl font-bold text-red-600">{mistakeCount}</div>
-              <div className="text-gray-600">Total Mistakes</div>
+              <div className={currentTheme.subText}>Total Mistakes</div>
             </div>
           </div>
         </div>
@@ -409,23 +446,23 @@ export default function SoloPractice() {
 
       {/* Historical Results */}
       {showResults && results.length > 0 && (
-        <div className="bg-white rounded-lg shadow-lg p-8">
+        <div className={`rounded-lg shadow-lg p-8 ${currentTheme.cardBackground}`}>
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Your Performance</h2>
-            <div className="text-sm text-gray-600">
+            <h2 className={`text-2xl font-bold ${currentTheme.text}`}>Your Performance</h2>
+            <div className={`text-sm ${currentTheme.subText}`}>
               Average: {avgWPM} WPM | {avgAccuracy}% Accuracy
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="font-semibold text-gray-800 mb-2">Personal Best</h3>
+            <div className={`p-4 rounded-lg ${currentTheme.statCards.gray}`}>
+              <h3 className={`font-semibold mb-2 ${currentTheme.text}`}>Personal Best</h3>
               <div className="text-2xl font-bold text-blue-600">
                 {results.length > 0 ? Math.max(...results.map(r => r.wpm)) : 0} WPM
               </div>
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="font-semibold text-gray-800 mb-2">Best Accuracy</h3>
+            <div className={`p-4 rounded-lg ${currentTheme.statCards.gray}`}>
+              <h3 className={`font-semibold mb-2 ${currentTheme.text}`}>Best Accuracy</h3>
               <div className="text-2xl font-bold text-green-600">
                 {results.length > 0 ? Math.max(...results.map(r => r.accuracy)) : 0}%
               </div>
@@ -434,22 +471,22 @@ export default function SoloPractice() {
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+              <thead className={currentTheme.tableHeader}>
                 <tr>
-                  <th className="px-4 py-2 text-left">Date</th>
-                  <th className="px-4 py-2 text-left">WPM</th>
-                  <th className="px-4 py-2 text-left">Accuracy</th>
-                  <th className="px-4 py-2 text-left">Time</th>
-                  <th className="px-4 py-2 text-left">Mistakes</th>
+                  <th className={`px-4 py-2 text-left ${currentTheme.text}`}>Date</th>
+                  <th className={`px-4 py-2 text-left ${currentTheme.text}`}>WPM</th>
+                  <th className={`px-4 py-2 text-left ${currentTheme.text}`}>Accuracy</th>
+                  <th className={`px-4 py-2 text-left ${currentTheme.text}`}>Time</th>
+                  <th className={`px-4 py-2 text-left ${currentTheme.text}`}>Mistakes</th>
                 </tr>
               </thead>
               <tbody>
                 {results.slice(-10).reverse().map((result, index) => (
-                  <tr key={index} className="border-t">
-                    <td className="px-4 py-2">{result.date}</td>
+                  <tr key={index} className={`border-t ${currentTheme.border}`}>
+                    <td className={`px-4 py-2 ${currentTheme.text}`}>{result.date}</td>
                     <td className="px-4 py-2 font-semibold text-blue-600">{result.wpm}</td>
                     <td className="px-4 py-2 font-semibold text-green-600">{result.accuracy}%</td>
-                    <td className="px-4 py-2">{result.time}s</td>
+                    <td className={`px-4 py-2 ${currentTheme.text}`}>{result.time}s</td>
                     <td className="px-4 py-2 font-semibold text-red-600">{result.mistakes || 0}</td>
                   </tr>
                 ))}

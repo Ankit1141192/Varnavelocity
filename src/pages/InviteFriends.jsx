@@ -453,338 +453,416 @@ function InviteFriends({ theme = "light" }) {
 
   return (
     <div
-      className={`min-h-screen p-8 ${theme === "dark" ? "bg-gray-900 text-white" : "bg-gray-100 text-black"
-        }`}
+  className={`min-h-screen p-8 ${theme === "dark" ? "bg-gray-900 text-white" : "bg-gray-100 text-black"
+    }`}
+>
+  <p className={`text-center md:text-lg mt-2 mb-8 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
+    Challenge your friends in a real-time typing speed battle and boost your skills in a fun way!
+  </p>
+
+  {!joined ? (
+    <div
+      className={`max-w-md mx-auto p-6 shadow-lg rounded-2xl ${theme === "dark" 
+        ? "bg-gray-800 border border-gray-700" 
+        : "bg-white border border-gray-200"
+      }`}
     >
+      <h1 className={`text-2xl font-bold text-center mb-6 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+        Typing Speed Challenge
+      </h1>
 
-      <p className="text-center text-gray-400 md:text-lg mt-2  mb-8">
-        Challenge your friends in a real-time typing speed battle and boost your skills in a fun way!
-      </p>
-
-      {!joined ? (
-        // rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 p-6 flex flex-col justify-between
-        <div
-          className={`max-w-md mx-auto p-6 border-gray-100 shadow-lg rounded-2xl ${theme === "dark" ? "bg-gray-200" : "bg-gray-200"
-            }`}
-        >
-          <h1 className="text-2xl font-bold text-gray-500 text-center mb-6">Typing Speed Challenge</h1>
-
-          {joinError && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-              {joinError}
-            </div>
-          )}
-
-          {!roomId && (
-
-            <button
-              onClick={createRoom}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white w-full py-3 rounded-lg mb-4 font-semibold transform hover:-translate-y-1 transition duration-400"
-            >
-              Create New Game Room
-            </button>
-          )}
-
-          <div className="space-y-3">
-            <input
-              placeholder="Enter Room ID"
-              value={roomId}
-              onChange={(e) => setRoomId(e.target.value.toLowerCase())}
-              className="w-full p-3 border-2 rounded-lg text-gray-400 focus:border-blue-500 focus:outline-none"
-              disabled={isJoining}
-            />
-            <input
-              placeholder="Enter Your Name"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              className="w-full p-3 border-2 rounded-lg text-gray-400 focus:border-blue-500 focus:outline-none"
-              onKeyPress={(e) => e.key === 'Enter' && !isJoining && handleJoin()}
-              disabled={isJoining}
-            />
-
-            <button
-              className={`w-full py-3 rounded-lg font-semibold transition-colors ${isJoining
-                ? "bg-gray-400 text-white cursor-not-allowed"
-                : "px-6 py-2 bg-black text-white rounded-lg font-bold transform hover:-translate-y-1 transition duration-400"
-                }`}
-              onClick={handleJoin}
-              disabled={isJoining}
-            >
-              {isJoining ? "Joining..." : "Join Room"}
-            </button>
-          </div>
-
-          {roomId && (
-            <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
-              <p className="text-sm font-medium text-gray-400 mb-2">Share this Room ID:</p>
-              <div className="flex items-center justify-between bg-gray-200 dark:bg-gray-600 rounded-lg p-2 mb-3">
-                <code className="text-gray-400 dark:text-white font-bold text-lg">
-                  {roomId}
-                </code>
-                <button
-                  onClick={() => navigator.clipboard.writeText(roomId)}
-                  className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded transition-colors"
-                  title="Copy Room ID"
-                >
-                  Copy
-                </button>
-              </div>
-
-              <p className="text-sm text-gray-400 font-medium mb-2">Or share this link:</p>
-              <div className="flex items-center justify-between bg-gray-200 dark:bg-gray-600 rounded-lg p-2">
-                <code className="text-gray-400 dark:text-white text-xs break-all mr-2">
-                  {window.location.origin}/collaborations/{roomId}
-                </code>
-                <button
-                  onClick={() => navigator.clipboard.writeText(`${window.location.origin}/collaborations/${roomId}`)}
-                  className="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded transition-colors whitespace-nowrap"
-                  title="Copy Link"
-                >
-                  Copy Link
-                </button>
-              </div>
-            </div>
-          )}
+      {joinError && (
+        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          {joinError}
         </div>
-      ) : (
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-6">
-            <h2 className="text-2xl text-gray-400 font-bold">Room: {roomId}</h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              {gameStarted ? (showLeaderboard ? "Game Complete!" : "Game in Progress") : "Waiting to start..."}
-            </p>
+      )}
 
-            {/* Show game timer */}
-            {gameStarted && !showLeaderboard && (
-              <div className="mt-3">
-                <div className={`inline-flex items-center gap-3 px-4 py-2 rounded-lg font-bold text-lg ${
-                  gameTimeLeft <= 30 ? "bg-red-100 text-red-700 animate-pulse" :
-                  gameTimeLeft <= 60 ? "bg-yellow-100 text-yellow-700" :
-                  "bg-blue-100 text-blue-700"
-                }`}>
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                  </svg>
-                  Time Left: {formatTime(gameTimeLeft)}
-                </div>
+      {!roomId && (
+        <button
+          onClick={createRoom}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white w-full py-3 rounded-lg mb-4 font-semibold transform hover:-translate-y-1 transition duration-400"
+        >
+          Create New Game Room
+        </button>
+      )}
 
-                {/* Personal timer */}
-                {isTyping && (
-                  <div className="mt-2 text-sm text-gray-600">
-                    Your Time: {formatTime(elapsedTime)}
-                  </div>
-                )}
-              </div>
-            )}
+      <div className="space-y-3">
+        <input
+          placeholder="Enter Room ID"
+          value={roomId}
+          onChange={(e) => setRoomId(e.target.value.toLowerCase())}
+          className={`w-full p-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none transition-colors ${
+            theme === "dark" 
+              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" 
+              : "bg-white border-gray-300 text-gray-800 placeholder-gray-500"
+          }`}
+          disabled={isJoining}
+        />
+        <input
+          placeholder="Enter Your Name"
+          value={userName}
+          onChange={(e) => setUserName(e.target.value)}
+          className={`w-full p-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none transition-colors ${
+            theme === "dark" 
+              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" 
+              : "bg-white border-gray-300 text-gray-800 placeholder-gray-500"
+          }`}
+          onKeyPress={(e) => e.key === 'Enter' && !isJoining && handleJoin()}
+          disabled={isJoining}
+        />
+
+        <button
+          className={`w-full py-3 rounded-lg font-semibold transition-all duration-300 ${
+            isJoining
+              ? "bg-gray-400 text-white cursor-not-allowed"
+              : "bg-black hover:bg-gray-800 text-white transform hover:-translate-y-1"
+          }`}
+          onClick={handleJoin}
+          disabled={isJoining}
+        >
+          {isJoining ? "Joining..." : "Join Room"}
+        </button>
+      </div>
+
+      {roomId && (
+        <div className={`mt-4 p-3 rounded-lg ${theme === "dark" ? "bg-gray-700" : "bg-gray-100"}`}>
+          <p className={`text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
+            Share this Room ID:
+          </p>
+          <div className={`flex items-center justify-between rounded-lg p-2 mb-3 ${
+            theme === "dark" ? "bg-gray-600" : "bg-gray-200"
+          }`}>
+            <code className={`font-bold text-lg ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+              {roomId}
+            </code>
+            <button
+              onClick={() => navigator.clipboard.writeText(roomId)}
+              className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded transition-colors"
+              title="Copy Room ID"
+            >
+              Copy
+            </button>
           </div>
 
-          {/* Users Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-            {users.map((user) => (
-              <div
-                key={user.id}
-                className={`rounded-2xl border bg-gray-200 p-6 bg-gradient-to-br from-white to-gray-50 shadow-md transition hover:shadow-lg ${user.finished ? "border-green-400" : "border-gray-200"
-                  }`}
-              >
-                <div className="flex flex-col items-center">
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    {user.userName}
-                    {user.id === userId && <span className="text-blue-500 ml-1">(You)</span>}
-                  </h3>
-
-                  <p className="text-sm text-gray-500 mt-2">
-                    Speed:{" "}
-                    <span className="font-semibold text-indigo-600">{user.speed || 0}</span> WPM
-                  </p>
-
-                  <p className="text-sm text-gray-500">
-                    Accuracy:{" "}
-                    <span className="font-semibold text-green-600">{user.accuracy || 100}%</span>
-                  </p>
-
-                  {user.totalTime > 0 && (
-                    <p className="text-sm text-gray-500">
-                      Time:{" "}
-                      <span className="font-semibold text-blue-600">{formatTime(user.totalTime)}</span>
-                    </p>
-                  )}
-
-                  {user.finished && (
-                    <div className="mt-3 px-3 py-1 bg-green-500 text-white text-xs rounded-full shadow-sm">
-                      Finished!
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+          <p className={`text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
+            Or share this link:
+          </p>
+          <div className={`flex items-center justify-between rounded-lg p-2 ${
+            theme === "dark" ? "bg-gray-600" : "bg-gray-200"
+          }`}>
+            <code className={`text-xs break-all mr-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+              {window.location.origin}/collaborations/{roomId}
+            </code>
+            <button
+              onClick={() => navigator.clipboard.writeText(`${window.location.origin}/collaborations/${roomId}`)}
+              className="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded transition-colors whitespace-nowrap"
+              title="Copy Link"
+            >
+              Copy Link
+            </button>
           </div>
-
-          {/* Game Controls */}
-          {!gameStarted && isCreator && users.length > 0 && (
-            <div className="text-center">
-              {/* NEW: Game Duration Selector */}
-              <div className="mb-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg inline-block">
-                <h4 className="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">Set Game Duration</h4>
-                <div className="flex items-center gap-4 justify-center">
-                  <label className="text-gray-600 dark:text-gray-400">Minutes:</label>
-                  <select
-                    value={gameDuration}
-                    onChange={async (e) => {
-                      const newDuration = parseInt(e.target.value);
-                      setGameDuration(newDuration);
-                      // Update in Firebase
-                      try {
-                        await set(ref(db, `rooms/${roomId}/gameDuration`), newDuration);
-                      } catch (error) {
-                        console.error("Error updating game duration:", error);
-                      }
-                    }}
-                    className="px-3 py-2 border-2 rounded-lg text-gray-700 focus:border-blue-500 focus:outline-none"
-                  >
-                    {[...Array(10)].map((_, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        {i + 1} minute{i + 1 > 1 ? 's' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <p className="text-sm text-gray-500 mt-2">
-                  Game will automatically end after {gameDuration} minute{gameDuration > 1 ? 's' : ''}
-                </p>
-              </div>
-
-              <div>
-                <button
-                  onClick={startGame}
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold text-lg transition-colors"
-                >
-                  Start {gameDuration} Minute Challenge
-                </button>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                  This will generate random words for everyone to type
-                </p>
-              </div>
-            </div>
-          )}
-
-          {!gameStarted && !isCreator && users.length > 0 && (
-            <div className="text-center">
-              <p className="text-gray-600 dark:text-gray-400">
-                Waiting for the room creator to start the game...
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
-                ({users.length} player{users.length !== 1 ? 's' : ''} in room)
-              </p>
-              <p className="text-sm text-blue-600 font-semibold mt-2">
-                Game Duration: {gameDuration} minute{gameDuration > 1 ? 's' : ''}
-              </p>
-            </div>
-          )}
-
-          {/* Typing Area - Available for ALL players once game starts */}
-          {gameStarted && !showLeaderboard && currentText && !gameEnded && (
-            <div className="mt-8">
-              <div className={`p-6 rounded-2xl shadow-lg ${theme === "dark" ? "bg-gray-800" : "bg-gray-100"
-                }`}>
-                <div className="text-center mb-4">
-                  <h3 className="text-xl font-bold">Type the following words:</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {currentText}
-                  </p>
-                </div>
-                <textarea
-                  className="w-full p-4 border-2 rounded-lg text-lg font-mono focus:border-blue-500 focus:outline-none"
-                  rows={3}
-                  value={typedText}
-                  onChange={handleTyping}
-                  disabled={gameEnded || showLeaderboard}
-                  placeholder="Start typing here..."
-                  spellCheck={false}
-                  autoFocus
-                />
-                <div className="flex flex-wrap gap-4 mt-4 justify-center">
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {/* Speed: <span className="font-bold text-indigo-600">{speed}</span> WPM */}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Accuracy: <span className="font-bold text-green-600">{totalKeystrokes > 0 ? Math.round((correctKeystrokes / totalKeystrokes) * 100) : 100}%</span>
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Errors: <span className="font-bold text-red-600">{errors}</span>
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Time: <span className="font-bold text-blue-600">{formatTime(elapsedTime)}</span>
-                  </div>
-                </div>
-                <div className="mt-6 text-center">
-                  <button
-                    className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors"
-                    onClick={endGame}
-                  >
-                    End Game
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Leaderboard */}
-          {showLeaderboard && (
-            <div className="mt-10">
-              <div className={`p-8 rounded-2xl shadow-lg ${theme === "dark" ? "bg-gray-800" : "bg-white"}`}>
-                <h3 className="text-2xl font-bold text-center mb-6 text-gray-700 dark:text-gray-200">Leaderboard</h3>
-                <table className="w-full text-left">
-                  <thead>
-                    <tr>
-                      <th className="py-2 px-4 text-gray-500">#</th>
-                      <th className="py-2 px-4 text-gray-500">Name</th>
-                      <th className="py-2 px-4 text-gray-500">Speed (WPM)</th>
-                      <th className="py-2 px-4 text-gray-500">Accuracy</th>
-                      <th className="py-2 px-4 text-gray-500">Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...users]
-                      .sort((a, b) => {
-                        // Sort by finished first, then by time, then by speed
-                        if (a.finished && !b.finished) return -1;
-                        if (!a.finished && b.finished) return 1;
-                        if (a.finished && b.finished) {
-                          if (a.totalTime !== b.totalTime) return a.totalTime - b.totalTime;
-                          return b.speed - a.speed;
-                        }
-                        return b.speed - a.speed;
-                      })
-                      .map((user, idx) => (
-                        <tr key={user.id} className={user.id === userId ? "bg-blue-50 dark:bg-blue-900" : ""}>
-                          <td className="py-2 px-4">{idx + 1}</td>
-                          <td className="py-2 px-4 font-semibold">
-                            {user.userName}
-                            {user.id === userId && <span className="text-blue-500 ml-1">(You)</span>}
-                          </td>
-                          <td className="py-2 px-4">{user.speed || 0}</td>
-                          <td className="py-2 px-4">{user.accuracy || 100}%</td>
-                          <td className="py-2 px-4">{user.totalTime > 0 ? formatTime(user.totalTime) : "--"}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-                <div className="text-center mt-8">
-                  {isCreator && (
-                    <button
-                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold text-lg transition-colors"
-                      onClick={startGame}
-                    >
-                      Start New Game
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>
+  ) : (
+    <div className="max-w-4xl mx-auto">
+      <div className="text-center mb-6">
+        <h2 className={`text-2xl font-bold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+          Room: {roomId}
+        </h2>
+        <p className={`${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+          {gameStarted ? (showLeaderboard ? "Game Complete!" : "Game in Progress") : "Waiting to start..."}
+        </p>
+
+        {/* Show game timer */}
+        {gameStarted && !showLeaderboard && (
+          <div className="mt-3">
+            <div className={`inline-flex items-center gap-3 px-4 py-2 rounded-lg font-bold text-lg ${
+              gameTimeLeft <= 30 ? "bg-red-100 text-red-700 animate-pulse" :
+              gameTimeLeft <= 60 ? "bg-yellow-100 text-yellow-700" :
+              "bg-blue-100 text-blue-700"
+            }`}>
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+              </svg>
+              Time Left: {formatTime(gameTimeLeft)}
+            </div>
+
+            {/* Personal timer */}
+            {isTyping && (
+              <div className={`mt-2 text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                Your Time: {formatTime(elapsedTime)}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Users Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+        {users.map((user) => (
+          <div
+            key={user.id}
+            className={`rounded-2xl border p-6 shadow-md transition hover:shadow-lg ${
+              user.finished 
+                ? "border-green-400 bg-green-50 dark:bg-green-900/20" 
+                : theme === "dark" 
+                  ? "border-gray-600 bg-gray-800" 
+                  : "border-gray-200 bg-white"
+            }`}
+          >
+            <div className="flex flex-col items-center">
+              <h3 className={`text-lg font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+                {user.userName}
+                {user.id === userId && <span className="text-blue-500 ml-1">(You)</span>}
+              </h3>
+
+              <p className={`text-sm mt-2 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
+                Speed:{" "}
+                <span className="font-semibold text-indigo-600">{user.speed || 0}</span> WPM
+              </p>
+
+              <p className={`text-sm ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
+                Accuracy:{" "}
+                <span className="font-semibold text-green-600">{user.accuracy || 100}%</span>
+              </p>
+
+              {user.totalTime > 0 && (
+                <p className={`text-sm ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
+                  Time:{" "}
+                  <span className="font-semibold text-blue-600">{formatTime(user.totalTime)}</span>
+                </p>
+              )}
+
+              {user.finished && (
+                <div className="mt-3 px-3 py-1 bg-green-500 text-white text-xs rounded-full shadow-sm">
+                  Finished!
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Game Controls */}
+      {!gameStarted && isCreator && users.length > 0 && (
+        <div className="text-center">
+          {/* Game Duration Selector */}
+          <div className={`mb-6 p-4 rounded-lg inline-block ${
+            theme === "dark" ? "bg-gray-800" : "bg-gray-100"
+          }`}>
+            <h4 className={`text-lg font-semibold mb-3 ${
+              theme === "dark" ? "text-gray-300" : "text-gray-700"
+            }`}>
+              Set Game Duration
+            </h4>
+            <div className="flex items-center gap-4 justify-center">
+              <label className={`${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                Minutes:
+              </label>
+              <select
+                value={gameDuration}
+                onChange={async (e) => {
+                  const newDuration = parseInt(e.target.value);
+                  setGameDuration(newDuration);
+                  try {
+                    await set(ref(db, `rooms/${roomId}/gameDuration`), newDuration);
+                  } catch (error) {
+                    console.error("Error updating game duration:", error);
+                  }
+                }}
+                className={`px-3 py-2 border-2 rounded-lg focus:border-blue-500 focus:outline-none ${
+                  theme === "dark" 
+                    ? "bg-gray-700 border-gray-600 text-white" 
+                    : "bg-white border-gray-300 text-gray-700"
+                }`}
+              >
+                {[...Array(10)].map((_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {i + 1} minute{i + 1 > 1 ? 's' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className={`text-sm mt-2 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+              Game will automatically end after {gameDuration} minute{gameDuration > 1 ? 's' : ''}
+            </p>
+          </div>
+
+          <div>
+            <button
+              onClick={startGame}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold text-lg transition-colors"
+            >
+              Start {gameDuration} Minute Challenge
+            </button>
+            <p className={`text-sm mt-2 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+              This will generate random words for everyone to type
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!gameStarted && !isCreator && users.length > 0 && (
+        <div className="text-center">
+          <p className={`${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+            Waiting for the room creator to start the game...
+          </p>
+          <p className={`text-sm mt-1 ${theme === "dark" ? "text-gray-500" : "text-gray-500"}`}>
+            ({users.length} player{users.length !== 1 ? 's' : ''} in room)
+          </p>
+          <p className="text-sm text-blue-600 font-semibold mt-2">
+            Game Duration: {gameDuration} minute{gameDuration > 1 ? 's' : ''}
+          </p>
+        </div>
+      )}
+
+      {/* Typing Area */}
+      {gameStarted && !showLeaderboard && currentText && !gameEnded && (
+        <div className="mt-8">
+          <div className={`p-6 rounded-2xl shadow-lg ${
+            theme === "dark" ? "bg-gray-800" : "bg-white border border-gray-200"
+          }`}>
+            <div className="text-center mb-4">
+              <h3 className={`text-xl font-bold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+                Type the following words:
+              </h3>
+              <div className={`text-lg font-mono p-4 rounded-lg mt-3 leading-relaxed ${
+                theme === "dark" ? "bg-gray-700 text-gray-200" : "bg-gray-100 text-gray-800"
+              }`}>
+                {currentText.split('').map((char, index) => {
+                  let className = '';
+                  if (index < typedText.length) {
+                    className = typedText[index] === char ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
+                  } else if (index === typedText.length) {
+                    className = 'bg-blue-200 animate-pulse';
+                  }
+                  return (
+                    <span key={index} className={`${className} px-0.3 rounded`}>
+                      {char}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+            <textarea
+              className={`w-full p-4 border-2 rounded-lg text-lg font-mono focus:border-blue-500 focus:outline-none resize-none ${
+                theme === "dark" 
+                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" 
+                  : "bg-white border-gray-300 text-gray-800 placeholder-gray-500"
+              }`}
+              rows={3}
+              value={typedText}
+              onChange={handleTyping}
+              disabled={gameEnded || showLeaderboard}
+              placeholder="Start typing here..."
+              spellCheck={false}
+              autoFocus
+            />
+            <div className="flex flex-wrap gap-4 mt-4 justify-center">
+              <div className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                Accuracy: <span className="font-bold text-green-600">{totalKeystrokes > 0 ? Math.round((correctKeystrokes / totalKeystrokes) * 100) : 100}%</span>
+              </div>
+              <div className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                Errors: <span className="font-bold text-red-600">{errors}</span>
+              </div>
+              <div className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                Time: <span className="font-bold text-blue-600">{formatTime(elapsedTime)}</span>
+              </div>
+            </div>
+            <div className="mt-6 text-center">
+              <button
+                className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors"
+                onClick={endGame}
+              >
+                End Game
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Leaderboard */}
+      {showLeaderboard && (
+        <div className="mt-10">
+          <div className={`p-8 rounded-2xl shadow-lg ${
+            theme === "dark" ? "bg-gray-800" : "bg-white border border-gray-200"
+          }`}>
+            <h3 className={`text-2xl font-bold text-center mb-6 ${
+              theme === "dark" ? "text-gray-200" : "text-gray-700"
+            }`}>
+              Leaderboard
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className={`border-b ${theme === "dark" ? "border-gray-600" : "border-gray-200"}`}>
+                    <th className={`py-3 px-4 font-semibold ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>#</th>
+                    <th className={`py-3 px-4 font-semibold ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>Name</th>
+                    <th className={`py-3 px-4 font-semibold ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>Speed (WPM)</th>
+                    <th className={`py-3 px-4 font-semibold ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>Accuracy</th>
+                    <th className={`py-3 px-4 font-semibold ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...users]
+                    .sort((a, b) => {
+                      if (a.finished && !b.finished) return -1;
+                      if (!a.finished && b.finished) return 1;
+                      if (a.finished && b.finished) {
+                        if (a.totalTime !== b.totalTime) return a.totalTime - b.totalTime;
+                        return b.speed - a.speed;
+                      }
+                      return b.speed - a.speed;
+                    })
+                    .map((user, idx) => (
+                      <tr 
+                        key={user.id} 
+                        className={`border-b transition-colors ${
+                          user.id === userId 
+                            ? theme === "dark" ? "bg-blue-900/50" : "bg-blue-50" 
+                            : theme === "dark" ? "hover:bg-gray-700" : "hover:bg-gray-50"
+                        } ${theme === "dark" ? "border-gray-600" : "border-gray-200"}`}
+                      >
+                        <td className={`py-3 px-4 font-bold ${
+                          idx === 0 ? "text-yellow-600" : idx === 1 ? "text-gray-500" : idx === 2 ? "text-orange-600" : theme === "dark" ? "text-gray-300" : "text-gray-700"
+                        }`}>
+                          {idx + 1}
+                        </td>
+                        <td className={`py-3 px-4 font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+                          {user.userName}
+                          {user.id === userId && <span className="text-blue-500 ml-1">(You)</span>}
+                        </td>
+                        <td className={`py-3 px-4 ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+                          {user.speed || 0}
+                        </td>
+                        <td className={`py-3 px-4 ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+                          {user.accuracy || 100}%
+                        </td>
+                        <td className={`py-3 px-4 ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+                          {user.totalTime > 0 ? formatTime(user.totalTime) : "--"}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="text-center mt-8">
+              {isCreator && (
+                <button
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold text-lg transition-colors"
+                  onClick={startGame}
+                >
+                  Start New Game
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )}
+</div>
   );
 }
 
