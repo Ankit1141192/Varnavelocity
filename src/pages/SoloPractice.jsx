@@ -19,7 +19,7 @@ const sampleTexts = [
 
 const Button = ({ children, onClick, variant = 'primary', size = 'md', disabled = false, theme = 'light' }) => {
   const baseClasses = 'font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2';
-  
+
   const variants = {
     light: {
       primary: 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500',
@@ -32,13 +32,13 @@ const Button = ({ children, onClick, variant = 'primary', size = 'md', disabled 
       outline: 'border border-gray-600 bg-gray-800 hover:bg-gray-700 text-gray-200 focus:ring-blue-500'
     }
   };
-  
+
   const sizes = {
     sm: 'px-3 py-1.5 text-sm',
     md: 'px-4 py-2',
     lg: 'px-6 py-3 text-lg'
   };
-  
+
   return (
     <button
       onClick={onClick}
@@ -176,12 +176,12 @@ export default function SoloPractice({ theme = "light" }) {
     while (wordStart > 0 && text[wordStart - 1] !== ' ') {
       wordStart--;
     }
-    
+
     let wordEnd = position;
     while (wordEnd < text.length && text[wordEnd] !== ' ') {
       wordEnd++;
     }
-    
+
     return { wordStart, wordEnd };
   };
 
@@ -191,16 +191,16 @@ export default function SoloPractice({ theme = "light" }) {
     const value = e.target.value;
     const previousLength = userInput.length;
     const currentLength = value.length;
-    
+
     if (currentLength < previousLength) {
       setUserInput(value);
       setCurrentIndex(value.length);
-      
+
       if (hasError) {
         let stillHasError = false;
         let wrongCount = 0;
         let firstErrorPos = -1;
-        
+
         for (let i = 0; i < value.length; i++) {
           if (i < currentText.length && value[i] !== currentText[i]) {
             if (firstErrorPos === -1) firstErrorPos = i;
@@ -210,7 +210,7 @@ export default function SoloPractice({ theme = "light" }) {
             wrongCount = 0;
           }
         }
-        
+
         if (!stillHasError || wrongCount === 0) {
           setHasError(false);
           setErrorPosition(-1);
@@ -222,9 +222,9 @@ export default function SoloPractice({ theme = "light" }) {
     if (hasError && currentLength > previousLength) {
       let wrongCount = 0;
       let firstErrorInWord = -1;
-      
+
       const { wordStart } = findWordBoundaries(currentText, errorPosition);
-      
+
       for (let i = wordStart; i < value.length && i < currentText.length; i++) {
         if (value[i] !== currentText[i]) {
           if (firstErrorInWord === -1) firstErrorInWord = i;
@@ -233,7 +233,7 @@ export default function SoloPractice({ theme = "light" }) {
           break;
         }
       }
-      
+
       if (wrongCount >= 3) {
         return;
       }
@@ -303,12 +303,12 @@ export default function SoloPractice({ theme = "light" }) {
       let className = theme === 'dark' ? 'text-gray-500' : 'text-gray-400';
 
       if (index < currentIndex) {
-        className = userInput[index] === char 
-          ? 'text-green-600 bg-green-100' 
+        className = userInput[index] === char
+          ? 'text-green-600 bg-green-100'
           : 'text-red-600 bg-red-100';
       } else if (index === currentIndex) {
-        className = theme === 'dark' 
-          ? 'text-gray-100 bg-blue-600 animate-pulse' 
+        className = theme === 'dark'
+          ? 'text-gray-100 bg-blue-600 animate-pulse'
           : 'text-gray-900 bg-blue-200 animate-pulse';
       }
 
@@ -325,11 +325,11 @@ export default function SoloPractice({ theme = "light" }) {
   return (
     <div className={`max-w-4xl mx-auto min-h-screen ${currentTheme.background}`}>
       {/* Test Controls */}
-      <div className="max-w-4xl mx-auto text-center mb-8 pt-8">
-        <h1 className={`text-4xl font-bold mb-2 ${currentTheme.text}`}>
+      <div className="max-w-4xl mx-auto text-center mb-8 pt-8 px-4 sm:px-6">
+        <h1 className={`text-2xl sm:text-3xl md:text-4xl font-bold mb-2 ${currentTheme.text}`}>
           Welcome to Solo Typing Practice!
         </h1>
-        <p className={`text-lg ${currentTheme.subText}`}>
+        <p className={`text-base sm:text-lg ${currentTheme.subText}`}>
           Improve your typing speed and accuracy with custom text passages. Choose your time limit and start typing!
         </p>
       </div>
@@ -355,21 +355,21 @@ export default function SoloPractice({ theme = "light" }) {
             </select>
           </div>
 
-          <div className="flex items-center space-x-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full sm:w-auto">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{timeLeft}s</div>
+              <div className="text-xl sm:text-2xl font-bold text-blue-600">{timeLeft}s</div>
               <div className={`text-sm ${currentTheme.subText}`}>Time Left</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{getCurrentWPM()}</div>
+              <div className="text-xl sm:text-2xl font-bold text-green-600">{getCurrentWPM()}</div>
               <div className={`text-sm ${currentTheme.subText}`}>WPM</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{getCurrentAccuracy()}%</div>
+              <div className="text-xl sm:text-2xl font-bold text-purple-600">{getCurrentAccuracy()}%</div>
               <div className={`text-sm ${currentTheme.subText}`}>Accuracy</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">{mistakeCount}</div>
+              <div className="text-xl sm:text-2xl font-bold text-red-600">{mistakeCount}</div>
               <div className={`text-sm ${currentTheme.subText}`}>Mistakes</div>
             </div>
           </div>
@@ -388,13 +388,12 @@ export default function SoloPractice({ theme = "light" }) {
             onChange={handleInputChange}
             disabled={!isActive || isFinished}
             placeholder={isActive ? "Start typing..." : "Click Start to begin"}
-            className={`w-full p-4 border rounded-lg text-lg focus:outline-none focus:ring-2 ${currentTheme.inputDisabled} ${
-              hasError 
-                ? 'border-red-500 focus:ring-red-500 bg-red-50' 
+            className={`w-full p-4 border rounded-lg text-lg focus:outline-none focus:ring-2 ${currentTheme.inputDisabled} ${hasError
+                ? 'border-red-500 focus:ring-red-500 bg-red-50'
                 : `${currentTheme.border} ${currentTheme.inputBg} focus:ring-blue-500`
-            }`}
+              }`}
           />
-          
+
           {hasError && (
             <div className="mt-2 text-sm text-red-600 flex items-center">
               <span className="mr-2">⚠️</span>

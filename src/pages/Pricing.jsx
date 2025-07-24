@@ -72,7 +72,7 @@ const Pricing = ({ theme = "light" }) => {
         <PlanCard
           theme={theme}
           title="Pro"
-          price="$79/mo"
+          price="$19/mo"
           description="For growing teams & power users"
           popular={true}
           features={[
