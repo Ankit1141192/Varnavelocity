@@ -116,20 +116,18 @@ function Home({ theme = 'light' }) {
 
           {/* Certificate Preview */}
           <div className="mt-4 flex justify-center relative p-2 sm:p-5">
-            <div className="relative w-full max-w-[600px]">
-              <img
-                src={Certificate}
-                alt="Typing Certificate"
-                className="rounded-md border shadow-lg w-full h-auto object-contain"
-              />
-              {userName && (
-                <div className="absolute top-[44%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-                  <p className="text-sm sm:text-lg md:text-xl font-semibold text-black break-words max-w-[200px] sm:max-w-[300px]">
-                    {userName}
-                  </p>
-                </div>
-              )}
+            <div className="mt-4 flex justify-center relative p-5">
+            <img
+              src={Certificate}
+              alt="Typing Certificate"
+              className="rounded-md border shadow-lg max-w-full"
+              style={{ maxWidth: '600px' }}
+            />
+            <div className="absolute top-[44%] left-[44%] transform -translate-x-1/2 -translate-y-1/2 text-center m-10">
+              <p className="text-xl font-semibold text-black">{userName}</p>
+              {/* <p className="text-sm text-gray-800 mt-1">Typing Speed: {typingSpeed}%</p> */}
             </div>
+          </div>
           </div>
         </div>
       </div>
