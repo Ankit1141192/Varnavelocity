@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { db } from "../firebase"; // Adjust path as needed
-import { ref, set, onValue, push, serverTimestamp, off } from "firebase/database";
+import { ref, set, onValue, serverTimestamp, off } from "firebase/database";
 
 function InviteFriends({ theme = "light" }) {
-  const { roomId: urlRoomId } = useParams(); 
+  const { urlId: urlRoomId } = useParams();
 
+  // Main game and UI states
   const [roomId, setRoomId] = useState(urlRoomId || "");
   const [userName, setUserName] = useState("");
   const [joined, setJoined] = useState(false);
@@ -23,20 +24,34 @@ function InviteFriends({ theme = "light" }) {
   const [joinError, setJoinError] = useState("");
   const [isJoining, setIsJoining] = useState(false);
 
-  // New states for enhanced accuracy and time tracking
+  // Copy button success state
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  // Typing stats
   const [totalKeystrokes, setTotalKeystrokes] = useState(0);
   const [correctKeystrokes, setCorrectKeystrokes] = useState(0);
   const [errors, setErrors] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [gameEndTime, setGameEndTime] = useState(null);
 
-  // NEW: Game timer states
-  const [gameDuration, setGameDuration] = useState(2); // Default 2 minutes
+  // Timer data
+  const [gameDuration, setGameDuration] = useState(2);
   const [gameTimeLeft, setGameTimeLeft] = useState(0);
   const [gameStartTimestamp, setGameStartTimestamp] = useState(null);
   const [gameEnded, setGameEnded] = useState(false);
 
-  // Random words for typing test
+  // UI modes
+  const [gameMode, setGameMode] = useState("create");
+  const [showRoomCreated, setShowRoomCreated] = useState(false);
+  const [showCustomParaInput, setShowCustomParaInput] = useState(false);
+  const [customPara, setCustomPara] = useState("");
+  const [savingPara, setSavingPara] = useState(false);
+
+  // Font family for typing area: support monospace, serif, sans-serif, cursive, font-bold
+  const [fontFamily, setFontFamily] = useState("monospace");
+  const [fontWeight, setFontWeight] = useState("normal"); // normal or bold
+
+  // Word bank for text generation
   const wordBank = [
     "ability", "about", "above", "accept", "according", "account", "across", "action", "activity", "actually",
     "address", "administration", "admit", "adult", "affect", "after", "again", "against", "agency", "agent",
@@ -49,133 +64,114 @@ function InviteFriends({ theme = "light" }) {
     "bill", "billion", "bit", "black", "blood", "blue", "board", "body", "book", "born", "both",
     "box", "boy", "break", "bring", "brother", "budget", "build", "building", "business", "buy",
     "call", "camera", "campaign", "can", "cancer", "candidate", "capital", "car", "card", "care",
-    "career", "carry", "case", "catch", "cause", "cell", "center", "central", "century", "certain"
+    "career", "carry", "case", "catch", "cause", "cell", "center", "century", "certain"
   ];
 
   const generateRandomText = () => {
-    const numWords = 25 + Math.floor(Math.random() * 10); // 15-25 words
+    const count = 25 + Math.floor(Math.random() * 10);
     const shuffled = [...wordBank].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, numWords).join(" ");
+    return shuffled.slice(0, count).join(" ");
   };
 
-  // Timer effect for elapsed time
+  // Copy room ID with feedback
+  const copyRoomId = () => {
+    navigator.clipboard.writeText(roomId).then(() => {
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    });
+  };
+
+  // Track elapsed time while typing
   useEffect(() => {
-    let interval;
+    let timer;
     if (isTyping && startTime && !gameEndTime) {
-      interval = setInterval(() => {
+      timer = setInterval(() => {
         setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
       }, 1000);
     }
-    return () => clearInterval(interval);
+    return () => clearInterval(timer);
   }, [isTyping, startTime, gameEndTime]);
 
-  // NEW: Game timer countdown effect
+  // Countdown game timer
   useEffect(() => {
-    let interval;
+    let timer;
     if (gameStarted && gameStartTimestamp && !gameEnded && !showLeaderboard) {
-      interval = setInterval(() => {
+      timer = setInterval(() => {
         const now = Date.now();
         const elapsed = Math.floor((now - gameStartTimestamp) / 1000);
-        const totalGameTime = gameDuration * 60; // Convert minutes to seconds
-        const remaining = Math.max(0, totalGameTime - elapsed);
-
+        const total = gameDuration * 60;
+        const remaining = Math.max(0, total - elapsed);
         setGameTimeLeft(remaining);
-
-        // Auto-end game when time runs out
-        if (remaining <= 0) {
-          endGameDueToTimeout();
-        }
+        if (remaining === 0) endGameByTimeout();
       }, 1000);
     }
-    return () => clearInterval(interval);
+    return () => clearInterval(timer);
   }, [gameStarted, gameStartTimestamp, gameEnded, showLeaderboard, gameDuration]);
 
-  // NEW: Function to end game due to timeout
-  const endGameDueToTimeout = async () => {
+  // End game on timeout
+  const endGameByTimeout = async () => {
     setGameEnded(true);
     setShowLeaderboard(true);
-
     if (isCreator) {
       try {
         await set(ref(db, `rooms/${roomId}/gameEnded`), true);
-        await set(ref(db, `rooms/${roomId}/endedBy`), 'timeout');
-      } catch (error) {
-        console.error("Error ending game due to timeout:", error);
-      }
+        await set(ref(db, `rooms/${roomId}/endedBy`), "timeout");
+      } catch { }
     }
   };
 
-  // Format time as MM:SS
-  const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  // Format seconds into MM:SS
+  const formatTime = (secs) => {
+    const minutes = Math.floor(secs / 60);
+    const seconds = secs % 60;
+    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   };
 
+  // Create room handler
   const createRoom = async () => {
-    const id = Math.random().toString(36).substring(2, 8).toLowerCase();
+    const id = Math.random().toString(36).slice(2, 8);
     setRoomId(id);
     setIsCreator(true);
-
+    setShowRoomCreated(true);
     try {
-      // Create room in Firebase with creator info
       await set(ref(db, `rooms/${id}`), {
         creator: userId,
         gameStarted: false,
+        gameDuration: 2,
         gameText: "",
-        gameDuration: 2, // Default 2 minutes
         createdAt: serverTimestamp(),
         users: {}
       });
-
-      console.log("Room created successfully:", id);
-    } catch (error) {
-      console.error("Error creating room:", error);
-      alert("Error creating room. Please try again.");
+    } catch {
+      alert("Failed to create room");
     }
   };
 
+  // Join room handler
   const handleJoin = async () => {
     if (!userName.trim()) {
-      setJoinError("Please enter your name.");
+      setJoinError("Please enter a name");
       return;
     }
     if (!roomId.trim()) {
-      setJoinError("Please enter a room ID.");
+      setJoinError("Please enter room ID");
       return;
     }
 
-    setIsJoining(true);
     setJoinError("");
-
+    setIsJoining(true);
     try {
       const roomRef = ref(db, `rooms/${roomId}`);
-
-      // Check if room exists first
-      const roomSnapshot = await new Promise((resolve) => {
-        onValue(roomRef, resolve, { onlyOnce: true });
-      });
-
-      if (!roomSnapshot.exists()) {
-        setJoinError("Room not found. Please check the room ID.");
+      const snapshot = await new Promise((res) => onValue(roomRef, res, { onlyOnce: true }));
+      if (!snapshot.exists()) {
+        setJoinError("Room not found");
         setRoomExists(false);
         setIsJoining(false);
         return;
       }
-
-      const roomData = roomSnapshot.val();
-
-      // Check if user is the creator
-      if (roomData.creator === userId || !roomData.creator) {
-        setIsCreator(true);
-      }
-
-      // Set game duration from room data
-      if (roomData.gameDuration) {
-        setGameDuration(roomData.gameDuration);
-      }
-
-      // Add user to room
+      const data = snapshot.val();
+      if (data.creator === userId || !data.creator) setIsCreator(true);
+      if (data.gameDuration) setGameDuration(data.gameDuration);
       await set(ref(db, `rooms/${roomId}/users/${userId}`), {
         userName: userName.trim(),
         speed: 0,
@@ -184,685 +180,691 @@ function InviteFriends({ theme = "light" }) {
         totalTime: 0,
         joinedAt: serverTimestamp()
       });
-
-      console.log("Successfully joined room:", roomId);
       setJoined(true);
       setRoomExists(true);
 
-      // Set current game state if game is already started
-      if (roomData.gameStarted && roomData.gameText) {
+      if (data.gameStarted && data.gameText) {
         setGameStarted(true);
-        setCurrentText(roomData.gameText);
-
-        // Set game timer if game is in progress
-        if (roomData.gameStartTimestamp) {
-          setGameStartTimestamp(roomData.gameStartTimestamp);
-          const elapsed = Math.floor((Date.now() - roomData.gameStartTimestamp) / 1000);
-          const totalGameTime = (roomData.gameDuration || 2) * 60;
-          setGameTimeLeft(Math.max(0, totalGameTime - elapsed));
+        setCurrentText(data.gameText);
+        if (data.gameStartTimestamp) {
+          setGameStartTimestamp(data.gameStartTimestamp);
+          const elapsed = Math.floor((Date.now() - data.gameStartTimestamp) / 1000);
+          setGameTimeLeft(Math.max(0, data.gameDuration * 60 - elapsed));
         }
       }
-
-    } catch (error) {
-      console.error("Error joining room:", error);
-      setJoinError("Error joining room. Please try again.");
-    } finally {
-      setIsJoining(false);
+    } catch {
+      setJoinError("Failed to join room");
     }
+    setIsJoining(false);
   };
 
+  // Start game handler
   const startGame = async () => {
     if (!isCreator) return;
-
-    const randomText = generateRandomText();
-    const gameStart = Date.now();
-
-    setCurrentText(randomText);
-    setGameStartTimestamp(gameStart);
+    const text = currentText.length >= 10 ? currentText : generateRandomText();
+    const startTS = Date.now();
+    setCurrentText(text);
+    setGameStartTimestamp(startTS);
     setGameTimeLeft(gameDuration * 60);
     setGameEnded(false);
 
     try {
-      // Update room with game data including timer
       await set(ref(db, `rooms/${roomId}/gameStarted`), true);
-      await set(ref(db, `rooms/${roomId}/gameText`), randomText);
       await set(ref(db, `rooms/${roomId}/gameDuration`), gameDuration);
-      await set(ref(db, `rooms/${roomId}/gameStartTimestamp`), gameStart);
+      await set(ref(db, `rooms/${roomId}/gameText`), text);
+      await set(ref(db, `rooms/${roomId}/gameStartTimestamp`), startTS);
       await set(ref(db, `rooms/${roomId}/gameEnded`), false);
-
-      // Reset all users for new game
       const usersRef = ref(db, `rooms/${roomId}/users`);
-      const snapshot = await new Promise((resolve) => {
-        onValue(usersRef, resolve, { onlyOnce: true });
-      });
-
-      if (snapshot.exists()) {
-        const usersData = snapshot.val();
-        const resetPromises = Object.keys(usersData).map(async (uid) => {
-          await set(ref(db, `rooms/${roomId}/users/${uid}/speed`), 0);
-          await set(ref(db, `rooms/${roomId}/users/${uid}/accuracy`), 100);
-          await set(ref(db, `rooms/${roomId}/users/${uid}/finished`), false);
-          await set(ref(db, `rooms/${roomId}/users/${uid}/totalTime`), 0);
-        });
-
-        await Promise.all(resetPromises);
+      const snap = await new Promise((res) => onValue(usersRef, res, { onlyOnce: true }));
+      if (snap.exists()) {
+        const usersData = snap.val();
+        await Promise.all(Object.keys(usersData).map(uid =>
+          Promise.all([
+            set(ref(db, `rooms/${roomId}/users/${uid}/speed`), 0),
+            set(ref(db, `rooms/${roomId}/users/${uid}/accuracy`), 100),
+            set(ref(db, `rooms/${roomId}/users/${uid}/finished`), false),
+            set(ref(db, `rooms/${roomId}/users/${uid}/totalTime`), 0)
+          ])
+        ));
       }
-
-      setGameStarted(true);
-      setStartTime(null);
       setTypedText("");
+      setStartTime(null);
       setIsTyping(false);
       setShowLeaderboard(false);
       setElapsedTime(0);
-      setGameEndTime(null);
-      // Reset accuracy tracking
+      setGameEnded(false);
       setTotalKeystrokes(0);
       setCorrectKeystrokes(0);
       setErrors(0);
-    } catch (error) {
-      console.error("Error starting game:", error);
-      alert("Error starting game. Please try again.");
+    } catch {
+      alert("Failed to start game");
     }
   };
 
+  // User typing handler
   const handleTyping = async (e) => {
-    // Don't allow typing if game has ended
     if (gameEnded || showLeaderboard) return;
-
     const value = e.target.value;
-    const previousLength = typedText.length;
-    const currentLength = value.length;
-
+    const prevLen = typedText.length;
+    const currentLen = value.length;
     setTypedText(value);
 
-    if (!isTyping && value.length > 0) {
+    if (!isTyping && currentLen > 0) {
       setIsTyping(true);
       setStartTime(Date.now());
     }
 
-    // Track keystrokes and accuracy
-    if (currentLength > previousLength) {
-      // User typed a character
-      const newChar = value[currentLength - 1];
-      const expectedChar = currentText[currentLength - 1];
-
-      setTotalKeystrokes(prev => prev + 1);
-
-      if (newChar === expectedChar) {
-        setCorrectKeystrokes(prev => prev + 1);
-      } else {
-        setErrors(prev => prev + 1);
-      }
+    if (currentLen > prevLen) {
+      const typedChar = value[currentLen - 1];
+      const expectedChar = currentText[currentLen - 1];
+      setTotalKeystrokes(p => p + 1);
+      if (typedChar === expectedChar) setCorrectKeystrokes(p => p + 1);
+      else setErrors(p => p + 1);
     }
 
     if (isTyping && startTime) {
-      const currentTime = Date.now();
-      const timeElapsed = (currentTime - startTime) / 1000 / 60; // minutes
-      const wordsTyped = value.trim().split(' ').filter(word => word).length;
-      const currentSpeed = Math.round(wordsTyped / timeElapsed) || 0;
+      const now = Date.now();
+      const elapsedMin = (now - startTime) / 60000;
+      const wordsTyped = value.trim().split(/\s+/).length;
+      const currSpeed = Math.round(wordsTyped / elapsedMin) || 0;
 
-      // Enhanced accuracy calculation
-      let accuracy = 100;
+      let currAccuracy = 100;
       if (totalKeystrokes > 0) {
-        // Calculate accuracy based on total keystrokes vs correct keystrokes
-        accuracy = Math.round((correctKeystrokes / totalKeystrokes) * 100);
-
-        // Alternative: You can also penalize for current wrong characters
-        let currentCorrectChars = 0;
+        currAccuracy = Math.round((correctKeystrokes / totalKeystrokes) * 100);
+        let correctChars = 0;
         for (let i = 0; i < Math.min(value.length, currentText.length); i++) {
-          if (value[i] === currentText[i]) {
-            currentCorrectChars++;
-          }
+          if (value[i] === currentText[i]) correctChars++;
         }
-
-        // Use the minimum of keystroke-based accuracy and current position accuracy
-        const positionAccuracy = value.length > 0 ? Math.round((currentCorrectChars / value.length) * 100) : 100;
-        accuracy = Math.min(accuracy, positionAccuracy);
+        const posAccuracy = value.length ? Math.round((correctChars / value.length) * 100) : 100;
+        currAccuracy = Math.min(currAccuracy, posAccuracy);
       }
 
-      setSpeed(currentSpeed);
-
-      // Update user data in Firebase
+      setSpeed(currSpeed);
       try {
-        await set(ref(db, `rooms/${roomId}/users/${userId}/speed`), currentSpeed);
-        await set(ref(db, `rooms/${roomId}/users/${userId}/accuracy`), accuracy);
-        await set(ref(db, `rooms/${roomId}/users/${userId}/totalTime`), Math.floor((currentTime - startTime) / 1000));
-      } catch (error) {
-        console.error("Error updating user data:", error);
-      }
+        await set(ref(db, `rooms/${roomId}/users/${userId}/speed`), currSpeed);
+        await set(ref(db, `rooms/${roomId}/users/${userId}/accuracy`), currAccuracy);
+        await set(ref(db, `rooms/${roomId}/users/${userId}/totalTime`), Math.floor((now - startTime) / 1000));
+      } catch { }
     }
 
-    // Check if user finished typing
-    if (value === currentText) {
-      finishTyping();
-    }
+    if (value === currentText) finishTyping();
   };
 
+  // Finish typing update
   const finishTyping = async () => {
-    const endTime = Date.now();
-    setGameEndTime(endTime);
-
+    const endTS = Date.now();
+    setGameEndTime(endTS);
     try {
-      const totalTime = startTime ? Math.floor((endTime - startTime) / 1000) : 0;
-      await set(ref(db, `rooms/${roomId}/users/${userId}/finished`), true);
-      await set(ref(db, `rooms/${roomId}/users/${userId}/totalTime`), totalTime);
-    } catch (error) {
-      console.error("Error finishing typing:", error);
-    }
+      const totalTime = startTime ? Math.floor((endTS - startTime) / 1000) : 0;
+      await Promise.all([
+        set(ref(db, `rooms/${roomId}/users/${userId}/finished`), true),
+        set(ref(db, `rooms/${roomId}/users/${userId}/totalTime`), totalTime)
+      ]);
+    } catch { }
   };
 
+  // End game handler
   const endGame = async () => {
     setGameEnded(true);
     setShowLeaderboard(true);
-
     if (isCreator) {
       try {
         await set(ref(db, `rooms/${roomId}/gameEnded`), true);
-        await set(ref(db, `rooms/${roomId}/endedBy`), 'manual');
-      } catch (error) {
-        console.error("Error ending game:", error);
-      }
+        await set(ref(db, `rooms/${roomId}/endedBy`), "manual");
+      } catch { }
     }
   };
 
-  // Listen to room changes in real-time
+  // Listen for realtime room changes
   useEffect(() => {
     if (!roomId || !joined) return;
-
     const roomRef = ref(db, `rooms/${roomId}`);
-
-    const unsubscribe = onValue(roomRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const roomData = snapshot.val();
-
-        // Update users list
-        if (roomData.users) {
-          const userList = Object.entries(roomData.users).map(([id, user]) => ({
-            id,
-            ...user,
-          }));
-          setUsers(userList);
-
-          // Check if all users finished
-          const finishedUsers = userList.filter(user => user.finished);
-          if (finishedUsers.length === userList.length && userList.length > 0 && gameStarted && !roomData.gameEnded) {
-            setShowLeaderboard(true);
-            setGameEnded(true);
-          }
-        }
-
-        // Update game state
-        setGameStarted(roomData.gameStarted || false);
-
-        // Check if game was ended by creator or timeout
-        if (roomData.gameEnded && !gameEnded) {
-          setGameEnded(true);
-          setShowLeaderboard(true);
-        }
-
-        // Update game duration
-        if (roomData.gameDuration && roomData.gameDuration !== gameDuration) {
-          setGameDuration(roomData.gameDuration);
-        }
-
-        // Update game text if it changed
-        if (roomData.gameText && roomData.gameText !== currentText) {
-          setCurrentText(roomData.gameText);
-          // Reset user's typing state when new game starts
-          if (typedText !== "") {
-            setTypedText("");
-            setStartTime(null);
-            setIsTyping(false);
-            setElapsedTime(0);
-            setGameEndTime(null);
-            setTotalKeystrokes(0);
-            setCorrectKeystrokes(0);
-            setErrors(0);
-            setGameEnded(false);
-          }
-        }
-
-        // Update game timer
-        if (roomData.gameStartTimestamp && roomData.gameStartTimestamp !== gameStartTimestamp) {
-          setGameStartTimestamp(roomData.gameStartTimestamp);
-          const elapsed = Math.floor((Date.now() - roomData.gameStartTimestamp) / 1000);
-          const totalGameTime = (roomData.gameDuration || 2) * 60;
-          setGameTimeLeft(Math.max(0, totalGameTime - elapsed));
-        }
-
-        // Set creator status
-        if (roomData.creator === userId) {
-          setIsCreator(true);
-        }
-      } else {
-        // Room was deleted
+    const listener = onValue(roomRef, (snapshot) => {
+      if (!snapshot.exists()) {
         setRoomExists(false);
-        setJoinError("Room no longer exists.");
+        setJoinError("Room no longer exists");
+        return;
       }
+      const data = snapshot.val();
+
+      if (data.users) {
+        const userArray = Object.entries(data.users).map(([id, u]) => ({ id, ...u }));
+        setUsers(userArray);
+        const finishedCount = userArray.filter(u => u.finished).length;
+        if (finishedCount === userArray.length && userArray.length > 0 && data.gameStarted && !data.gameEnded) {
+          setShowLeaderboard(true);
+          setGameEnded(true);
+        }
+      }
+
+      setGameStarted(data.gameStarted || false);
+      if (data.gameEnded && !gameEnded) {
+        setGameEnded(true);
+        setShowLeaderboard(true);
+      }
+
+      if (data.gameDuration && data.gameDuration !== gameDuration) setGameDuration(data.gameDuration);
+
+      if (data.gameText !== currentText) {
+        setCurrentText(data.gameText || "");
+        if (typedText.length > 0) {
+          setTypedText("");
+          setStartTime(null);
+          setIsTyping(false);
+          setElapsedTime(0);
+          setGameEndTime(null);
+          setTotalKeystrokes(0);
+          setCorrectKeystrokes(0);
+          setErrors(0);
+          setGameEnded(false);
+        }
+      }
+
+      if (data.gameStartTimestamp !== gameStartTimestamp) {
+        setGameStartTimestamp(data.gameStartTimestamp || null);
+        if (data.gameStartTimestamp && data.gameDuration) {
+          const elapsed = Math.floor((Date.now() - data.gameStartTimestamp) / 1000);
+          setGameTimeLeft(Math.max(0, data.gameDuration * 60 - elapsed));
+        }
+      }
+
+      if (data.creator === userId) setIsCreator(true);
     });
 
-    return () => off(roomRef, 'value', unsubscribe);
-  }, [roomId, joined, currentText, userId, gameStarted, typedText, gameEnded, gameDuration, gameStartTimestamp]);
+    return () => off(roomRef, "value", listener);
+  }, [roomId, joined, currentText, typedText, gameStarted, gameEnded, gameDuration, gameStartTimestamp, userId]);
 
-  // Auto-join if roomId is in URL and username is provided
+  // Auto join if URL contains room ID & user name exists
   useEffect(() => {
     if (urlRoomId && !joined && userName.trim() && !isJoining) {
       handleJoin();
     }
+    // eslint-disable-next-line
   }, [urlRoomId, userName, joined, isJoining]);
 
+  // Theme classes for light/dark
+  const bgClass = theme === "dark" ? "bg-gray-900" : "bg-gray-100";
+  const textPrimary = theme === "dark" ? "text-white" : "text-gray-900";
+  const textSecondary = theme === "dark" ? "text-gray-300" : "text-gray-600";
+  const cardBg = theme === "dark" ? "bg-gray-800/90" : "bg-white/90";
+  const borderColor = theme === "dark" ? "border-gray-700" : "border-gray-300";
+
+  // Style changes for text area based on fontWeight
+  const fontWeightStyle = fontWeight === "bold" ? "font-bold" : "font-normal";
+
   return (
-    <div
-  className={`min-h-screen p-8 ${theme === "dark" ? "bg-gray-900 text-white" : "bg-gray-100 text-black"
-    }`}
->
-  <p className={`text-center md:text-lg mt-2 mb-8 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
-    Challenge your friends in a real-time typing speed battle and boost your skills in a fun way!
-  </p>
-
-  {!joined ? (
-    <div
-      className={`max-w-md mx-auto p-6 shadow-lg rounded-2xl ${theme === "dark" 
-        ? "bg-gray-800 border border-gray-700" 
-        : "bg-white border border-gray-200"
-      }`}
-    >
-      <h1 className={`text-2xl font-bold text-center mb-6 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
-        Typing Speed Challenge
-      </h1>
-
-      {joinError && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-          {joinError}
+    <div className={`${bgClass} min-h-screen py-20 flex items-center justify-center`}>
+      <div className={`max-w-4xl w-full px-6`}>
+        <div className="text-center mb-12">
+          <h1 className={`${textPrimary} text-5xl font-bold mb-4`}>Challenge Your Friends</h1>
+          <p className={`${textSecondary} text-xl max-w-2xl mx-auto`}>Challenge your friends in a real-time typing battle and boost your skills!</p>
         </div>
-      )}
 
-      {!roomId && (
-        <button
-          onClick={createRoom}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white w-full py-3 rounded-lg mb-4 font-semibold transform hover:-translate-y-1 transition duration-400"
-        >
-          Create New Game Room
-        </button>
-      )}
+        {!joined ? (
+          <div className={`${cardBg} ${borderColor} border rounded-3xl p-8 shadow-lg`}>
+            <div className="text-center mb-8">
+              <h2 className={`${textPrimary} text-3xl font-bold mb-6`}>Typing Speed Challenge</h2>
+              <div className="flex justify-center mb-8">
+                <div className="flex space-x-2 bg-white p-1 border border-gray-500/50 rounded-full text-sm">
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      name="options"
+                      id="option1"
+                      className="hidden peer"
+                      checked={gameMode === "create"}
+                      onChange={() => setGameMode("create")}
+                    />
+                    <label
+                      htmlFor="option1"
+                      className="cursor-pointer rounded-full py-2 px-9 text-gray-500 transition-colors duration-200 peer-checked:bg-indigo-600 peer-checked:text-white"
+                    >
+                      Create
+                    </label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      name="options"
+                      id="option2"
+                      className="hidden peer"
+                      checked={gameMode === "join"}
+                      onChange={() => setGameMode("join")}
+                    />
+                    <label
+                      htmlFor="option2"
+                      className="cursor-pointer rounded-full py-2 px-9 text-gray-500 transition-colors duration-200 peer-checked:bg-indigo-600 peer-checked:text-white"
+                    >
+                      Join
+                    </label>
+                  </div>
+                </div>
 
-      <div className="space-y-3">
-        <input
-          placeholder="Enter Room ID"
-          value={roomId}
-          onChange={(e) => setRoomId(e.target.value.toLowerCase())}
-          className={`w-full p-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none transition-colors ${
-            theme === "dark" 
-              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" 
-              : "bg-white border-gray-300 text-gray-800 placeholder-gray-500"
-          }`}
-          disabled={isJoining}
-        />
-        <input
-          placeholder="Enter Your Name"
-          value={userName}
-          onChange={(e) => setUserName(e.target.value)}
-          className={`w-full p-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none transition-colors ${
-            theme === "dark" 
-              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" 
-              : "bg-white border-gray-300 text-gray-800 placeholder-gray-500"
-          }`}
-          onKeyPress={(e) => e.key === 'Enter' && !isJoining && handleJoin()}
-          disabled={isJoining}
-        />
-
-        <button
-          className={`w-full py-3 rounded-lg font-semibold transition-all duration-300 ${
-            isJoining
-              ? "bg-gray-400 text-white cursor-not-allowed"
-              : "bg-black hover:bg-gray-800 text-white transform hover:-translate-y-1"
-          }`}
-          onClick={handleJoin}
-          disabled={isJoining}
-        >
-          {isJoining ? "Joining..." : "Join Room"}
-        </button>
-      </div>
-
-      {roomId && (
-        <div className={`mt-4 p-3 rounded-lg ${theme === "dark" ? "bg-gray-700" : "bg-gray-100"}`}>
-          <p className={`text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
-            Share this Room ID:
-          </p>
-          <div className={`flex items-center justify-between rounded-lg p-2 mb-3 ${
-            theme === "dark" ? "bg-gray-600" : "bg-gray-200"
-          }`}>
-            <code className={`font-bold text-lg ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
-              {roomId}
-            </code>
-            <button
-              onClick={() => navigator.clipboard.writeText(roomId)}
-              className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded transition-colors"
-              title="Copy Room ID"
-            >
-              Copy
-            </button>
-          </div>
-
-          <p className={`text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
-            Or share this link:
-          </p>
-          <div className={`flex items-center justify-between rounded-lg p-2 ${
-            theme === "dark" ? "bg-gray-600" : "bg-gray-200"
-          }`}>
-            <code className={`text-xs break-all mr-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
-              {window.location.origin}/collaborations/{roomId}
-            </code>
-            <button
-              onClick={() => navigator.clipboard.writeText(`${window.location.origin}/collaborations/${roomId}`)}
-              className="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded transition-colors whitespace-nowrap"
-              title="Copy Link"
-            >
-              Copy Link
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  ) : (
-    <div className="max-w-4xl mx-auto">
-      <div className="text-center mb-6">
-        <h2 className={`text-2xl font-bold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
-          Room: {roomId}
-        </h2>
-        <p className={`${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
-          {gameStarted ? (showLeaderboard ? "Game Complete!" : "Game in Progress") : "Waiting to start..."}
-        </p>
-
-        {/* Show game timer */}
-        {gameStarted && !showLeaderboard && (
-          <div className="mt-3">
-            <div className={`inline-flex items-center gap-3 px-4 py-2 rounded-lg font-bold text-lg ${
-              gameTimeLeft <= 30 ? "bg-red-100 text-red-700 animate-pulse" :
-              gameTimeLeft <= 60 ? "bg-yellow-100 text-yellow-700" :
-              "bg-blue-100 text-blue-700"
-            }`}>
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-              </svg>
-              Time Left: {formatTime(gameTimeLeft)}
+              </div>
             </div>
-
-            {/* Personal timer */}
-            {isTyping && (
-              <div className={`mt-2 text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
-                Your Time: {formatTime(elapsedTime)}
+            {joinError && (
+              <div className="max-w-md mx-auto mb-4 p-3 bg-red-100 border border-red-400 rounded text-red-700 text-center">
+                {joinError}
+              </div>
+            )}
+            {gameMode === "create" ? (
+              !showRoomCreated ? (
+                <div className="max-w-md mx-auto space-y-6">
+                  <div className="text-center">
+                    <div className="mx-auto mb-4 w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center">
+                      <svg
+                        className="w-8 h-8 text-blue-600"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                          clipRule="evenodd"
+                        ></path>
+                      </svg>
+                    </div>
+                    <p className={`${textSecondary} mb-4`}>Create a new room and invite friends</p>
+                  </div>
+                  <button
+                    onClick={createRoom}
+                    className="w-full py-4 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold hover:from-blue-700 hover:to-purple-700 transition"
+                  >
+                    Create Room
+                  </button>
+                </div>
+              ) : (
+                <div className="max-w-md mx-auto space-y-6 text-center">
+                  <div className="mx-auto w-20 h-20 mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                    <svg
+                      className="w-8 h-8 text-green-600"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4 1.414-1.414 4 4 7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      ></path>
+                    </svg>
+                  </div>
+                  <h3 className={`${textPrimary} text-2xl font-bold`}>Room Created!</h3>
+                  <div className="max-w-md mx-auto p-6 bg-white rounded shadow relative">
+                    <p className="mb-2 text-gray-700">Room ID:</p>
+                    <div className="flex items-center justify-center space-x-3 relative">
+                      <code className="px-4 py-2 bg-blue-100 rounded text-blue-700 font-mono text-xl font-bold">
+                        {roomId.toUpperCase()}
+                      </code>
+                      <button
+                        title="Copy Room ID"
+                        className="p-2 rounded bg-gray-500 hover:bg-gray-200 relative"
+                        onClick={copyRoomId}
+                        aria-live="polite"
+                        aria-atomic="true"
+                      >
+                        <svg
+                          width="17"
+                          height="17"
+                          viewBox="0 0 17 17"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M14.498 5.5h-7.5a1.5 1.5 0 0 0-1.5 1.5v7.5a1.5 1.5 0 0 0 1.5 1.5h7.5a1.5 1.5 0 0 0 1.5-1.5V7a1.5 1.5 0 0 0-1.5-1.5"
+                            stroke="#fff"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M2.5 11.5c-.825 0-1.5-.675-1.5-1.5V2.5C1 1.675 1.675 1 2.5 1H10c.825 0 1.5.675 1.5 1.5"
+                            stroke="#fff"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        {copySuccess && (
+                          <span className="absolute -top-6 left-1/2 transform -translate-x-1/2 rounded bg-black bg-opacity-80 text-white text-xs px-2 py-1 pointer-events-none select-none whitespace-nowrap">
+                            Copied!
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <p className={textSecondary}>Share the Room ID with friends to join.</p>
+                  <input
+                    type="text"
+                    placeholder="Your Name"
+                    className="w-full px-4 py-3 rounded border border-gray-300 text-center"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                  />
+                  <button
+                    onClick={handleJoin}
+                    disabled={!userName.trim() || isJoining}
+                    className="w-full py-3 rounded bg-green-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isJoining ? "Joining..." : "Join Room"}
+                  </button>
+                </div>
+              )
+            ) : (
+              <div className="max-w-md mx-auto space-y-6">
+                <p className={`${textSecondary} text-center`}>Enter Room ID and your name to join.</p>
+                <input
+                  type="text"
+                  placeholder="Room ID"
+                  maxLength={6}
+                  className="w-full px-4 py-3 rounded border border-gray-300 text-center font-mono text-lg"
+                  value={roomId}
+                  onChange={(e) => setRoomId(e.target.value.toLowerCase())}
+                />
+                <input
+                  type="text"
+                  placeholder="Your Name"
+                  className="w-full px-4 py-3 rounded border border-gray-300 text-center"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                />
+                <button
+                  onClick={handleJoin}
+                  disabled={!roomId || !userName || isJoining}
+                  className="w-full py-3 rounded bg-orange-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isJoining ? "Joining..." : "Join Room"}
+                </button>
               </div>
             )}
           </div>
-        )}
-      </div>
-
-      {/* Users Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-        {users.map((user) => (
-          <div
-            key={user.id}
-            className={`rounded-2xl border p-6 shadow-md transition hover:shadow-lg ${
-              user.finished 
-                ? "border-green-400 bg-green-50 dark:bg-green-900/20" 
-                : theme === "dark" 
-                  ? "border-gray-600 bg-gray-800" 
-                  : "border-gray-200 bg-white"
-            }`}
-          >
-            <div className="flex flex-col items-center">
-              <h3 className={`text-lg font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
-                {user.userName}
-                {user.id === userId && <span className="text-blue-500 ml-1">(You)</span>}
-              </h3>
-
-              <p className={`text-sm mt-2 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
-                Speed:{" "}
-                <span className="font-semibold text-indigo-600">{user.speed || 0}</span> WPM
-              </p>
-
-              <p className={`text-sm ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
-                Accuracy:{" "}
-                <span className="font-semibold text-green-600">{user.accuracy || 100}%</span>
-              </p>
-
-              {user.totalTime > 0 && (
-                <p className={`text-sm ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
-                  Time:{" "}
-                  <span className="font-semibold text-blue-600">{formatTime(user.totalTime)}</span>
-                </p>
+        ) : (
+          <div>
+            <div className="mb-4 text-center font-mono text-blue-700 uppercase tracking-widest">
+              {roomId.toUpperCase()}
+            </div>
+            <div className="flex flex-wrap justify-center gap-2 mb-6">
+              {users.map((u) => (
+                <div
+                  key={u.id}
+                  className={`px-2 py-1 rounded-full font-semibold text-sm border ${u.id === userId
+                      ? "bg-blue-100 text-blue-700 border-blue-400"
+                      : "bg-gray-100 text-gray-600 border-gray-300"
+                    }`}
+                >
+                  {u.userName}
+                  {u.id === userId ? " (You)" : ""}
+                  {u.finished && <span className="ml-1 text-green-700">✔</span>}
+                </div>
+              ))}
+            </div>
+            <div
+              className={`${cardBg} ${borderColor} border rounded-xl p-6 max-w-xl mx-auto shadow-lg`}
+            >
+              {/* Creator Controls */}
+              {!gameStarted && isCreator && (
+                <>
+                  <div className="mb-6">
+                    <label className={`${textSecondary} mr-2`}>Duration:</label>
+                    <select
+                      className="border rounded px-2 py-1"
+                      value={gameDuration}
+                      onChange={async (e) => {
+                        const val = parseInt(e.target.value);
+                        setGameDuration(val);
+                        try {
+                          await set(
+                            ref(db, `rooms/${roomId}/gameDuration`),
+                            val
+                          );
+                        } catch { }
+                      }}
+                    >
+                      {[...Array(10)].map((_, i) => (
+                        <option key={i} value={i + 1}>{i + 1} min</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="mb-4">
+                    {!showCustomParaInput ? (
+                      <button
+                        className="bg-purple-600 text-white rounded px-4 py-2 mb-2 hover:bg-purple-700"
+                        onClick={() => {
+                          setShowCustomParaInput(true);
+                          setCustomPara(currentText);
+                        }}
+                      >
+                        {currentText.length >= 10 ? "Edit Paragraph" : "Add Paragraph"}
+                      </button>
+                    ) : (
+                      <div>
+                        <textarea
+                          rows="4"
+                          maxLength={800}
+                          value={customPara}
+                          onChange={(e) => setCustomPara(e.target.value)}
+                          className="w-full border rounded p-2 font-mono resize-none"
+                          placeholder="Your paragraph..."
+                        />
+                        <div className="flex justify-center gap-2 mt-2">
+                          <button
+                            className="bg-green-600 text-white rounded px-4 py-2 disabled:opacity-50"
+                            disabled={savingPara || customPara.trim().length < 10}
+                            onClick={async () => {
+                              setSavingPara(true);
+                              try {
+                                await set(
+                                  ref(db, `rooms/${roomId}/gameText`),
+                                  customPara.trim()
+                                );
+                                setCurrentText(customPara.trim());
+                                setShowCustomParaInput(false);
+                              } catch {
+                                alert("Failed saving paragraph");
+                              }
+                              setSavingPara(false);
+                            }}
+                          >
+                            Save
+                          </button>
+                          <button
+                            className="bg-gray-400 text-white rounded px-4 py-2"
+                            disabled={savingPara}
+                            onClick={() => setShowCustomParaInput(false)}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    className="w-full bg-green-600 text-white rounded py-3 hover:bg-green-700"
+                    onClick={startGame}
+                  >
+                    Start Game
+                  </button>
+                </>
               )}
 
-              {user.finished && (
-                <div className="mt-3 px-3 py-1 bg-green-500 text-white text-xs rounded-full shadow-sm">
-                  Finished!
+              {/* Not creator waiting */}
+              {!gameStarted && !isCreator && (
+                <div className="text-center mb-2 text-gray-500">
+                  Waiting for game start...
+                </div>
+              )}
+
+              {/* Game in progress */}
+              {gameStarted && !showLeaderboard && (
+                <>
+                  <div className="text-center mb-4">
+                    <span
+                      className={`inline-block py-1 px-3 rounded-full text-sm ${gameTimeLeft <= 30
+                          ? "bg-red-100 text-red-600 animate-pulse"
+                          : gameTimeLeft <= 60
+                            ? "bg-yellow-100 text-yellow-600"
+                            : "bg-blue-100 text-blue-600"
+                        }`}
+                    >
+                      {`Time Left: ${formatTime(gameTimeLeft)}`}
+                    </span>
+                    {isTyping && (
+                      <div className="text-sm mt-1 text-gray-500">{`Your Time: ${formatTime(
+                        elapsedTime
+                      )}`}</div>
+                    )}
+                  </div>
+                  <div className="mb-3 flex justify-center items-center gap-2">
+                    <label>Font:</label>
+                    <select
+                      className="border rounded px-2 py-1"
+                      value={fontFamily}
+                      onChange={(e) => setFontFamily(e.target.value)}
+                    >
+                      <option value="monospace">Monospace</option>
+                      <option value="serif">Serif</option>
+                      <option value="sans-serif">Sans Serif</option>
+                      <option value="cursive">Cursive</option>
+                    </select>
+                    <label>Weight:</label>
+                    <select
+                      className="border rounded px-2 py-1"
+                      value={fontWeight}
+                      onChange={(e) => setFontWeight(e.target.value)}
+                    >
+                      <option value="normal">Normal</option>
+                      <option value="bold">Bold</option>
+                    </select>
+                  </div>
+                  <div
+                    className={`bg-gray-100 text-lg rounded p-4 mb-3 overflow-x-auto`}
+                    style={{ fontFamily: fontFamily }}
+                  >
+                    {currentText.split("").map((char, i) => {
+                      let className = fontWeight === "bold" ? "font-bold" : "";
+                      if (i < typedText.length) {
+                        className +=
+                          typedText[i] === char
+                            ? " text-green-600 bg-green-100"
+                            : " text-red-600 bg-red-100";
+                      } else if (i === typedText.length) {
+                        className += " bg-blue-100 animate-pulse";
+                      }
+                      return (
+                        <span key={i} className={`${className} rounded px-1`}>
+                          {char}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <textarea
+                    value={typedText}
+                    onChange={handleTyping}
+                    disabled={gameEnded || showLeaderboard}
+                    spellCheck={false}
+                    rows={3}
+                    autoFocus
+                    placeholder="Start typing..."
+                    style={{ fontFamily: fontFamily }}
+                    className={`w-full p-3 border border-gray-300 rounded text-lg resize-none ${fontWeight === "bold" ? "font-bold" : ""
+                      }`}
+                  />
+                  <div className="flex justify-center gap-6 text-sm mb-4">
+                    <div>
+                      Accuracy:{" "}
+                      <strong>
+                        {totalKeystrokes
+                          ? Math.round(
+                            (correctKeystrokes / totalKeystrokes) * 100
+                          )
+                          : 100}
+                        %
+                      </strong>
+                    </div>
+                    <div>
+                      Errors: <strong>{errors}</strong>
+                    </div>
+                    <div>
+                      Time: <strong>{formatTime(elapsedTime)}</strong>
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <button
+                      disabled={gameEnded}
+                      onClick={endGame}
+                      className="bg-red-600 text-white py-2 px-5 rounded hover:bg-red-700 transition"
+                    >
+                      End Game
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Leaderboard */}
+              {showLeaderboard && (
+                <div>
+                  <h3 className="text-xl font-bold text-center mb-4">Leaderboard</h3>
+                  <table className="w-full border border-gray-300 border-collapse">
+                    <thead>
+                      <tr className="bg-gray-200">
+                        <th className="border border-gray-300 p-2 text-center">#</th>
+                        <th className="border border-gray-300 p-2">Name</th>
+                        <th className="border border-gray-300 p-2">WPM</th>
+                        <th className="border border-gray-300 p-2">Accuracy</th>
+                        <th className="border border-gray-300 p-2">Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users
+                        .slice()
+                        .sort((a, b) => {
+                          if (a.finished && !b.finished) return -1;
+                          if (!a.finished && b.finished) return 1;
+                          if (a.finished && b.finished) {
+                            if (a.accuracy !== b.accuracy)
+                              return b.accuracy - a.accuracy;
+                            if (a.speed !== b.speed) return b.speed - a.speed;
+                            return a.totalTime - b.totalTime;
+                          }
+                          if (a.accuracy !== b.accuracy) return b.accuracy - a.accuracy;
+                          if (a.speed !== b.speed) return b.speed - a.speed;
+                          return 0;
+                        })
+                        .map((u, idx) => (
+                          <tr
+                            key={u.id}
+                            className={
+                              u.id === userId ? "bg-blue-100 font-semibold" : "hover:bg-gray-50"
+                            }
+                          >
+                            <td className="border border-gray-300 p-2 text-center">
+                              {idx + 1}
+                            </td>
+                            <td className="border border-gray-300 p-2">
+                              {u.userName}
+                              {u.id === userId ? " (You)" : ""}
+                            </td>
+                            <td className="border border-gray-300 p-2">{u.speed || 0}</td>
+                            <td className="border border-gray-300 p-2">{u.accuracy || 100}%</td>
+                            <td className="border border-gray-300 p-2">
+                              {u.totalTime > 0 ? formatTime(u.totalTime) : "--"}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                  {isCreator && (
+                    <button
+                      onClick={startGame}
+                      className="w-full mt-4 py-3 bg-green-600 text-white rounded hover:bg-green-700 transition"
+                    >
+                      Start New Game
+                    </button>
+                  )}
                 </div>
               )}
             </div>
           </div>
-        ))}
+        )}
       </div>
-
-      {/* Game Controls */}
-      {!gameStarted && isCreator && users.length > 0 && (
-        <div className="text-center">
-          {/* Game Duration Selector */}
-          <div className={`mb-6 p-4 rounded-lg inline-block ${
-            theme === "dark" ? "bg-gray-800" : "bg-gray-100"
-          }`}>
-            <h4 className={`text-lg font-semibold mb-3 ${
-              theme === "dark" ? "text-gray-300" : "text-gray-700"
-            }`}>
-              Set Game Duration
-            </h4>
-            <div className="flex items-center gap-4 justify-center">
-              <label className={`${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
-                Minutes:
-              </label>
-              <select
-                value={gameDuration}
-                onChange={async (e) => {
-                  const newDuration = parseInt(e.target.value);
-                  setGameDuration(newDuration);
-                  try {
-                    await set(ref(db, `rooms/${roomId}/gameDuration`), newDuration);
-                  } catch (error) {
-                    console.error("Error updating game duration:", error);
-                  }
-                }}
-                className={`px-3 py-2 border-2 rounded-lg focus:border-blue-500 focus:outline-none ${
-                  theme === "dark" 
-                    ? "bg-gray-700 border-gray-600 text-white" 
-                    : "bg-white border-gray-300 text-gray-700"
-                }`}
-              >
-                {[...Array(10)].map((_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {i + 1} minute{i + 1 > 1 ? 's' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <p className={`text-sm mt-2 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
-              Game will automatically end after {gameDuration} minute{gameDuration > 1 ? 's' : ''}
-            </p>
-          </div>
-
-          <div>
-            <button
-              onClick={startGame}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold text-lg transition-colors"
-            >
-              Start {gameDuration} Minute Challenge
-            </button>
-            <p className={`text-sm mt-2 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
-              This will generate random words for everyone to type
-            </p>
-          </div>
-        </div>
-      )}
-
-      {!gameStarted && !isCreator && users.length > 0 && (
-        <div className="text-center">
-          <p className={`${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
-            Waiting for the room creator to start the game...
-          </p>
-          <p className={`text-sm mt-1 ${theme === "dark" ? "text-gray-500" : "text-gray-500"}`}>
-            ({users.length} player{users.length !== 1 ? 's' : ''} in room)
-          </p>
-          <p className="text-sm text-blue-600 font-semibold mt-2">
-            Game Duration: {gameDuration} minute{gameDuration > 1 ? 's' : ''}
-          </p>
-        </div>
-      )}
-
-      {/* Typing Area */}
-      {gameStarted && !showLeaderboard && currentText && !gameEnded && (
-        <div className="mt-8">
-          <div className={`p-6 rounded-2xl shadow-lg ${
-            theme === "dark" ? "bg-gray-800" : "bg-white border border-gray-200"
-          }`}>
-            <div className="text-center mb-4">
-              <h3 className={`text-xl font-bold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
-                Type the following words:
-              </h3>
-              <div className={`text-lg font-mono p-4 rounded-lg mt-3 leading-relaxed ${
-                theme === "dark" ? "bg-gray-700 text-gray-200" : "bg-gray-100 text-gray-800"
-              }`}>
-                {currentText.split('').map((char, index) => {
-                  let className = '';
-                  if (index < typedText.length) {
-                    className = typedText[index] === char ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
-                  } else if (index === typedText.length) {
-                    className = 'bg-blue-200 animate-pulse';
-                  }
-                  return (
-                    <span key={index} className={`${className} px-0.3 rounded`}>
-                      {char}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-            <textarea
-              className={`w-full p-4 border-2 rounded-lg text-lg font-mono focus:border-blue-500 focus:outline-none resize-none ${
-                theme === "dark" 
-                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" 
-                  : "bg-white border-gray-300 text-gray-800 placeholder-gray-500"
-              }`}
-              rows={3}
-              value={typedText}
-              onChange={handleTyping}
-              disabled={gameEnded || showLeaderboard}
-              placeholder="Start typing here..."
-              spellCheck={false}
-              autoFocus
-            />
-            <div className="flex flex-wrap gap-4 mt-4 justify-center">
-              <div className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
-                Accuracy: <span className="font-bold text-green-600">{totalKeystrokes > 0 ? Math.round((correctKeystrokes / totalKeystrokes) * 100) : 100}%</span>
-              </div>
-              <div className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
-                Errors: <span className="font-bold text-red-600">{errors}</span>
-              </div>
-              <div className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
-                Time: <span className="font-bold text-blue-600">{formatTime(elapsedTime)}</span>
-              </div>
-            </div>
-            <div className="mt-6 text-center">
-              <button
-                className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors"
-                onClick={endGame}
-              >
-                End Game
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Leaderboard */}
-      {showLeaderboard && (
-        <div className="mt-10">
-          <div className={`p-8 rounded-2xl shadow-lg ${
-            theme === "dark" ? "bg-gray-800" : "bg-white border border-gray-200"
-          }`}>
-            <h3 className={`text-2xl font-bold text-center mb-6 ${
-              theme === "dark" ? "text-gray-200" : "text-gray-700"
-            }`}>
-              Leaderboard
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className={`border-b ${theme === "dark" ? "border-gray-600" : "border-gray-200"}`}>
-                    <th className={`py-3 px-4 font-semibold ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>#</th>
-                    <th className={`py-3 px-4 font-semibold ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>Name</th>
-                    <th className={`py-3 px-4 font-semibold ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>Speed (WPM)</th>
-                    <th className={`py-3 px-4 font-semibold ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>Accuracy</th>
-                    <th className={`py-3 px-4 font-semibold ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>Time</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...users]
-                    .sort((a, b) => {
-                      if (a.finished && !b.finished) return -1;
-                      if (!a.finished && b.finished) return 1;
-                      if (a.finished && b.finished) {
-                        if (a.totalTime !== b.totalTime) return a.totalTime - b.totalTime;
-                        return b.speed - a.speed;
-                      }
-                      return b.speed - a.speed;
-                    })
-                    .map((user, idx) => (
-                      <tr 
-                        key={user.id} 
-                        className={`border-b transition-colors ${
-                          user.id === userId 
-                            ? theme === "dark" ? "bg-blue-900/50" : "bg-blue-50" 
-                            : theme === "dark" ? "hover:bg-gray-700" : "hover:bg-gray-50"
-                        } ${theme === "dark" ? "border-gray-600" : "border-gray-200"}`}
-                      >
-                        <td className={`py-3 px-4 font-bold ${
-                          idx === 0 ? "text-yellow-600" : idx === 1 ? "text-gray-500" : idx === 2 ? "text-orange-600" : theme === "dark" ? "text-gray-300" : "text-gray-700"
-                        }`}>
-                          {idx + 1}
-                        </td>
-                        <td className={`py-3 px-4 font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
-                          {user.userName}
-                          {user.id === userId && <span className="text-blue-500 ml-1">(You)</span>}
-                        </td>
-                        <td className={`py-3 px-4 ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
-                          {user.speed || 0}
-                        </td>
-                        <td className={`py-3 px-4 ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
-                          {user.accuracy || 100}%
-                        </td>
-                        <td className={`py-3 px-4 ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
-                          {user.totalTime > 0 ? formatTime(user.totalTime) : "--"}
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="text-center mt-8">
-              {isCreator && (
-                <button
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold text-lg transition-colors"
-                  onClick={startGame}
-                >
-                  Start New Game
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
-  )}
-</div>
   );
 }
 
