@@ -585,8 +585,8 @@ function InviteFriends({ theme = "light" }) {
                 <div
                   key={u.id}
                   className={`px-2 py-1 rounded-full font-semibold text-sm border ${u.id === userId
-                      ? "bg-blue-100 text-blue-700 border-blue-400"
-                      : "bg-gray-100 text-gray-600 border-gray-300"
+                    ? "bg-blue-100 text-blue-700 border-blue-400"
+                    : "bg-gray-100 text-gray-600 border-gray-300"
                     }`}
                 >
                   {u.userName}
@@ -697,10 +697,10 @@ function InviteFriends({ theme = "light" }) {
                   <div className="text-center mb-4">
                     <span
                       className={`inline-block py-1 px-3 rounded-full text-sm ${gameTimeLeft <= 30
-                          ? "bg-red-100 text-red-600 animate-pulse"
-                          : gameTimeLeft <= 60
-                            ? "bg-yellow-100 text-yellow-600"
-                            : "bg-blue-100 text-blue-600"
+                        ? "bg-red-100 text-red-600 animate-pulse"
+                        : gameTimeLeft <= 60
+                          ? "bg-yellow-100 text-yellow-600"
+                          : "bg-blue-100 text-blue-600"
                         }`}
                     >
                       {`Time Left: ${formatTime(gameTimeLeft)}`}
@@ -817,15 +817,9 @@ function InviteFriends({ theme = "light" }) {
                         .sort((a, b) => {
                           if (a.finished && !b.finished) return -1;
                           if (!a.finished && b.finished) return 1;
-                          if (a.finished && b.finished) {
-                            if (a.accuracy !== b.accuracy)
-                              return b.accuracy - a.accuracy;
-                            if (a.speed !== b.speed) return b.speed - a.speed;
-                            return a.totalTime - b.totalTime;
-                          }
-                          if (a.accuracy !== b.accuracy) return b.accuracy - a.accuracy;
                           if (a.speed !== b.speed) return b.speed - a.speed;
-                          return 0;
+                          if (a.accuracy !== b.accuracy) return b.accuracy - a.accuracy;
+                          return a.totalTime - b.totalTime;
                         })
                         .map((u, idx) => (
                           <tr
