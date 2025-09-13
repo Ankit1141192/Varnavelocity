@@ -54,7 +54,7 @@ https://varnavelocity.vercel.app/
 
 📂 Project Setup
 # Clone the repo
-git clone https://github.com/your-username/varnavelocity.git
+git clone https://github.com/Ankit1141192/Varnavelocity
 cd varnavelocity
 
 # Install dependencies
